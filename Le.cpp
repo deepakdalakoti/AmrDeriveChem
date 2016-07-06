@@ -71,7 +71,7 @@ main (int   argc,
     bool do_temp = true;
     bool do_VelVisc = true;
     FArrayBox rhoD(bx,Nspec+2);
-    cd.getMixAveragedRhoDiff(rhoD,Y,T,Patm,bx,0,0,0,do_temp,do_VelVisc);
+    cd.getMixAveragedRhoDiff(rhoD,Y,T,Patm,bx,0,0,0);
 
     FArrayBox cpmix(bx,1);
     cd.getCpmixGivenTY(cpmix,T,Y,bx,0,0,0);
