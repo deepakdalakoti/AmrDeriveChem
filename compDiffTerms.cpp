@@ -442,11 +442,11 @@ main (int   argc,
         AmrData::SetVerbose(true);
 
     std::string TransportFile="tran.asc.chem-H"; pp.query("TransportFile",TransportFile);
-    ChemDriver cd(TransportFile);
+    ChemDriver cd;
 
     std::string plotFileName; pp.get("infile",plotFileName);
     DataServices::SetBatchMode();
-    FileType fileType(NEWPLT);
+   Amrvis::FileType fileType(Amrvis::NEWPLT);
 
     DataServices dataServices(plotFileName, fileType);
     if( ! dataServices.AmrDataOk()) {
@@ -459,7 +459,7 @@ main (int   argc,
     int idXin = -1;
     int idTin = -1;
     const Array<std::string>& plotVarNames = amrData.PlotVarNames();
-    const std::string spName = "X(" + cd.speciesNames()[0] + ")";
+    const std::string spName = "Y(" + cd.speciesNames()[0] + ")";
     const int nSpec = cd.numSpecies();
     for (int i=0; i<plotVarNames.size(); ++i)
     {

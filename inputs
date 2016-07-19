@@ -1,4 +1,11 @@
-geometry.is_periodic =  1 0
-geometry.prob_lo     =  0. 0.
-geometry.prob_hi     =  1. 1.
-geometry.coord_sys   =  0
+infile = /scratch1/scratchdirs/dalakoti/plt_hwk_01295
+whichSpec = OH
+fuelName = NC12H26
+geometry.coord_sys =0 
+geometry.prob_lo = -0.0256 -0.0256 0
+geometry.prob_hi = 0.0256 0.0256 0.064 
+Xfu = 1.0
+nX =64
+nY = 64
+varX = Z
+varYs = temp

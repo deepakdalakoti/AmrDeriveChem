@@ -1,21 +1,27 @@
-TOP             = ${HOME}/src/CCSE
+TOP             = ./..
 BOXLIB_HOME     = ${TOP}/BoxLib
 AMRVIS_HOME     = ${BOXLIB_HOME}/Src/Extern/amrdata
 COMBUSTION_HOME = ${TOP}/Combustion
 CHEMISTRY_DIR   = ${COMBUSTION_HOME}/Chemistry
 
 PRECISION      = DOUBLE
-DEBUG	       = FALSE
+DEBUG	       = TRUE
 PROFILE        = FALSE
 DIM    	       = 2
 DIM    	       = 3
-COMP           = g++
-FCOMP          = gfortran
+COMP           = intel
+FCOMP          = intel
 USE_MPI        = FALSE
 USE_MPI        = TRUE
 NEEDS_CHEM     = TRUE
 EBASE          = replaceXwithC
-EBASE          = Le
+EBASE          = gradT
+EBASE 	       = AmrDeriveMixtureFrac_edited
+#EBASE          = getConditionalAvg
+#EBASE          = budget
+#EBASE          = FlameIndex
+#EBASE          = Damkoh
+#EBASE          = EdgeSpeed
 USE_SDC        = TRUE
 
 CHEMISTRY_MODEL=CHEMH
@@ -25,15 +31,15 @@ CHEMISTRY_MODEL=INERT30
 CHEMISTRY_MODEL=CH4-2STEP
 CHEMISTRY_MODEL=DRM19
 CHEMISTRY_MODEL=LUDME
-CHEMISTRY_MODEL=LIDRY
-CHEMISTRY_MODEL=WANGDODECANE
-CHEMISTRY_MODEL=GRI30NON
+#CHEMISTRY_MODEL=LIDRY
+CHEMISTRY_MODEL=DODECANE_LU
+#CHEMISTRY_MODEL=GRI30NON
 
 #CXXFLAGS += -fno-inline -ggdb 
 CFLAGS +="-std=c99"
-
+#USE_LMC_SDC = TRUE
 include ${BOXLIB_HOME}/Tools/C_mk/Make.defs 
-
+#NEEDS_FORT = TRUE
 fincludes=${includes}
 
 # Chemistry
@@ -60,6 +66,7 @@ CEXE_sources += ${EBASE}.cpp
 ifeq ($(NEEDS_FORT), TRUE)
   FEXE_sources += ${EBASE}_F.F
 endif
+
 FEXE_sources += FILCC_$(DIM)D.F
 CEXE_sources += AppendToPlotFile.cpp
 CEXE_headers += AppendToPlotFile.H
@@ -105,7 +112,10 @@ ifeq (${NEEDS_CHEM}, TRUE)
     cEXE_sources += dodecane_wang.c
     MODEL_DIR = ${CHEMISTRY_DIR}/data/dodecane_wang
   endif
-
+  ifeq (${CHEMISTRY_MODEL}, DODECANE_LU)
+    cEXE_sources +=dodecane_lu.c
+    MODEL_DIR = ${CHEMISTRY_DIR}/data/dodecane_lu
+  endif
 
   VPATH_LOCATIONS += ${MODEL_DIR}:${MODEL_DIR}/PMFs
 

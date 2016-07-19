@@ -49,6 +49,7 @@ AppendToPlotFile(AmrData&                  amrData,
         //
         // Start writing new plotfile header.
         //
+//         std::cout << "reaching here" << std::endl;
         std::string version;
         is >> version;
         os << version << '\n';
@@ -127,7 +128,7 @@ AppendToPlotFile(AmrData&                  amrData,
     // Write out level by level.
     //
     std::string mfBaseName_Unique = mfBaseName; // Possibly modified if same name already used
-
+    
     for (int iLevel = 0; iLevel <= finestLevel; ++iLevel)
     {
         //
@@ -174,7 +175,9 @@ AppendToPlotFile(AmrData&                  amrData,
         //
         // Force other processors to wait until directory is "built".
         //
+  //       std::cout << "Above Barrier" << std::endl;       
         ParallelDescriptor::Barrier();
+  //       std::cout << "Below Barrir" << std::endl;
 
         std::string RelativePathNameNEW(buf);
         RelativePathNameNEW += '/';
@@ -200,10 +203,13 @@ AppendToPlotFile(AmrData&                  amrData,
                 }
 
                 string mfName(oFile);
+                string corrected ;
                 mfName += '/';
                 mfName += RelativePathNameOLD;
+                corrected += RelativePathNameOLD;
                 VisMF visMF(mfName);
-                os << mfName << '\n';
+                os << corrected << '\n';
+                std::cout << corrected << std::endl;
                 currentIndexComp += visMF.nComp();
             }
 
@@ -221,11 +227,12 @@ AppendToPlotFile(AmrData&                  amrData,
         //
         PathName += '/';
         PathName += mfBaseName;
-
+//        std::cout << "Aboe Vismf" <<std::endl;
+       
         // Write the new multifab
         VisMF::Write(mfout[iLevel], PathName, VisMF::OneFilePerCPU);
     }
-    
+//       std::cout <<"just above file close" << std::endl;   
     os.close();
     is.close();
 }

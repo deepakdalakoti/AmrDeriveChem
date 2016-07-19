@@ -1,4 +1,4 @@
-
+#include "Array.H"
 #include "REAL.H"
 #include "Box.H"
 #include "PArray.H"
@@ -34,8 +34,8 @@ main (int   argc,
 
   std::string infile; pp.get("infile",infile);
   std::string outfile = infile + std::string("_xi"); pp.query("outfile",outfile);
-
-  DataServices::SetBatchMode();
+ std::cout << "checkpoint1" << std::endl;
+ DataServices::SetBatchMode();
   Amrvis::FileType fileType(Amrvis::NEWPLT);
   DataServices dataServices(infile, fileType);
   if (!dataServices.AmrDataOk())
@@ -53,7 +53,7 @@ main (int   argc,
   Array<Real> elementAtomicWt = cd.elementAtomicWt();
 
   int nCompIn = nSpec + 1;
-  Array<string> varNames(nCompIn);
+  Array<string> varNames(nCompIn,0);
   for (int i=0; i<nSpec; ++i) {
 #ifdef MASS_FRAC_IN_PLOTFILE
     varNames[i] = "Y(" + cd.speciesNames()[i] + ")";
@@ -101,8 +101,7 @@ main (int   argc,
   std::string fuelName = "CH3OCH3"; pp.query("fuelName",fuelName);
   Real Xfu = 0.2; pp.query("Xfu",Xfu);
   BL_ASSERT(Xfu<=1 && Xfu>=0);
-
-  X_fu[cd.index(fuelName)] = Xfu;
+    X_fu[cd.index(fuelName)] = Xfu;
   X_fu[cd.index("N2")] = 1 - Xfu;
   Array<Real> Y_fu = cd.moleFracToMassFrac(X_fu);
   std::cout << "Mass frac of fuel: " << Y_fu[cd.index(fuelName)] << std::endl;
@@ -112,7 +111,7 @@ main (int   argc,
       if (mu[spec][elt] != 0) {
         Z_fu[elt] += mu[spec][elt] * Y_fu[spec];
 
-        std::cout << "mu_FU["<< speciesNames[spec] << "][" << elementNames[elt]<< "] = " << mu[spec][elt] << std::endl;
+//        std::cout << "mu_FU["<< speciesNames[spec] << "][" << elementNames[elt]<< "] = " << mu[spec][elt] << std::endl;
 
       }
     }
@@ -176,7 +175,8 @@ main (int   argc,
   
   
   if (ParallelDescriptor::IOProcessor()) {
-    std::cout << "Zstar_st = " << Zstar_st << std::endl;
+   std::cout << "fuel name " << fuelName << std::endl ;
+   std::cout << "Zstar_st = " << Zstar_st << std::endl;
     std::cout << "xi_st = " << (Zstar_st - Zstar_ox)/(Zstar_fu - Zstar_ox) << std::endl;
   }
   PArray<MultiFab> mf(Nlev);
