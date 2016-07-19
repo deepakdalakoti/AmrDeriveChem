@@ -184,13 +184,13 @@ main (int   argc,
     if (verbose > 2)
         AmrData::SetVerbose(true);
 
-    ChemDriver cd("tran.asc.drm19");
+    ChemDriver cd;//("tran.asc.drm19");
 //    ChemDriver cd("tran.asc.glarSkel");
 
     std::string infile; pp.get("infile",infile);
 
     DataServices::SetBatchMode();
-    FileType fileType(NEWPLT);
+    Amrvis:: FileType fileType(Amrvis::NEWPLT);
     DataServices dataServices(infile, fileType);
     if (!dataServices.AmrDataOk())
         DataServices::Dispatch(DataServices::ExitRequest, NULL);    
@@ -199,17 +199,18 @@ main (int   argc,
     int Nlev = finestLevel + 1;
     
     std::string progressName = "HeatRelease"; pp.query("progressName",progressName);
-    Real progMin = 0.; pp.query("progMin",progMin);
+    Real progMin = 0; pp.query("progMin",progMin);
     Real progMax = 100000.; pp.query("progMax",progMax);
-    Real lowpercent = 0.85; pp.query("lowpercent", lowpercent);
+    Real lowpercent = 0.0; pp.query("lowpercent", lowpercent);
     Real uppercent = 1.0; pp.query("uppercent", uppercent);
     amrData.MinMax(amrData.ProbDomain()[finestLevel], progressName, finestLevel, progMin, progMax);
     Real lowval = progMax*lowpercent;
     Real upval = progMax*uppercent;
-    std::string region = "strongburning"; pp.query("region",region);
+    std::string region = "allburning"; pp.query("region",region);
     Real stdEdgeThick = 20; pp.query("stdEdgeThick",stdEdgeThick);  
     
     Box domain = amrData.ProbDomain()[0];
+    std::cout << "domain: " << domain << std::endl;
     vector<int> bbll,bbur;
     if (int nx=pp.countval("bounds"))
     {
@@ -218,13 +219,20 @@ main (int   argc,
         IntVect sm(D_DECL(barr[0],barr[1],barr[2]));
         IntVect bg(D_DECL(barr[BL_SPACEDIM],barr[BL_SPACEDIM+1],barr[BL_SPACEDIM+2]));
         domain &= Box(sm,bg);
-
+        std::cout << "domain: " << domain << std::endl;
         if (ParallelDescriptor::IOProcessor() && verbose)
           std::cout << "domain: " << domain << std::endl;
+
+          
     }
 
     // Build boxarrays for fillvar call
+    //IntVect sm(D_DECL(0,0,500));
+    //IntVect bg(D_DECL(90,90,550));
+    //domain &= Box(sm,bg);
+    std::cout << "domain: " << domain << std::endl; 
     Box levelDomain = domain;
+    amrData.MinMax(domain, progressName, finestLevel, progMin, progMax);
     Array<BoxArray> bas(Nlev);
     for (int iLevel=0; (iLevel<=finestLevel)&&(bas.size()==Nlev); ++iLevel)
     {
@@ -252,7 +260,7 @@ main (int   argc,
     Array<string> varNames(nSpec+1+1); // add heat release too
     for (int i=0; i<nSpec; ++i)
     {
-        varNames[sCompX + i] = "X(" + cd.speciesNames()[i] + ")";
+        varNames[sCompX + i] = "Y(" + cd.speciesNames()[i] + ")";
         if (amrData.StateNumber(varNames[sCompX + i]) < 0)
             BoxLib::Abort(std::string("Cannot find " + varNames[sCompX + i]).c_str());
     }
@@ -273,6 +281,7 @@ main (int   argc,
     Array<Real> Rsum(Nreacs,0);
     FArrayBox Fwd, Rev, maskFab;
 
+    if(BL_SPACEDIM == 2) {
     int nv = pp.countval("poly");
     if (nv % 2 != 0)
        BoxLib::Abort("Need even number of values for poly");
@@ -281,6 +290,7 @@ main (int   argc,
     Array<TPoint> polygon(Np); 
     for (int ip = 0; ip < Np; ++ip){
        polygon[ip] = TPoint(poly[2*ip],poly[2*ip+1]);
+    }
     }
 
     std::string outfile_check(""); pp.query("outfile_check",outfile_check);
@@ -310,9 +320,10 @@ main (int   argc,
         long totalCellsThisLevel = 0;
         for (MFIter mfi(mf); mfi.isValid(); ++mfi)
         {
-            const FArrayBox& X = mf[mfi];
+            const FArrayBox& Y = mf[mfi];
             const FArrayBox& T = mf[mfi];
             const FArrayBox& HR = mf[mfi];
+            FArrayBox& X = mf[mfi];
             
             const Box& box = mfi.validbox();
             Fwd.resize(box,Nreacs);
@@ -320,6 +331,7 @@ main (int   argc,
             maskFab.resize(box,1);
             maskFab.setVal(1.);
             
+            cd.massFracToMoleFrac(X,Y,box,0,0);
             cd.fwdRevReacRatesGivenXTP(Fwd,Rev,reacIds,X,T,Patm,box,sCompX,sCompT,0,0);
             
             // Zero out covered data
@@ -341,12 +353,12 @@ main (int   argc,
                                Rev.dataPtr(),ARLIM(Rev.loVect()),ARLIM(Rev.hiVect()),
                                &lowval, &upval, &Nreacs);
 #endif         
-            
+/*            
 #if      POLYGON       
             ZeroFabOutsidePolygon(polygon,0,1,DX,maskFab);
             if (outfile_check!="")
                 ZeroFabOutsidePolygon(polygon,0,state[iLevel].nComp(),DX,state[iLevel][mfi]);
-#endif
+#endif*/
 
             totalCellsThisLevel += maskFab.sum(0);
             for (int i=0; i<Nreacs; ++i)
@@ -402,6 +414,7 @@ main (int   argc,
         std::cout<<"\n total edges "<<edges.size()<<std::endl;
         std::map<EdgeList::const_iterator,Real,ELIcompare> F, R;
         Real normVal = 0;
+        Real normVal_temp = 0;
         
         for (EdgeList::const_iterator it = edges.begin(); it!=edges.end(); ++it)
         {
@@ -413,13 +426,15 @@ main (int   argc,
 
             }
             
-            if (it->touchesSp("CH4") and it->touchesSp("CH3"))
+            if (it->touchesSp("NC12H26"))// and it->touchesSp("CH3"))
             {
-               normVal = stdEdgeThick/(F[it]-R[it]); // Normalize to CH4 destruction on CH4->CH3 edge
-               if (it->right()=="CH4")
-                   normVal *= -1;
+               normVal_temp = stdEdgeThick/(F[it]-R[it]); // Normalize to CH4 destruction on CH4->CH3 edge
+               if (it->right()=="NC12H26")
+                   normVal_temp *= -1;
+               normVal += normVal_temp;
             }
         }
+        std::cout << "NormVal: " << normVal << std::endl;
 
         for (EdgeList::const_iterator it = edges.begin(); it!=edges.end(); ++it)
         {
@@ -432,11 +447,11 @@ main (int   argc,
         }
         for (EdgeList::const_iterator it = edges.begin(); it!=edges.end(); ++it)
         {
-            if (it->touchesSp("CH4"))
+            if (it->touchesSp("NC12H26"))
             {
                 std::cout << *it << std::endl;
                 std::map<std::string,Real> edgeContrib;
-                int rSgn = ( it->left()=="CH4"  ?  -1  :  +1);
+                int rSgn = ( it->left()=="NC12H26"  ?  -1  :  +1);
                 const Array<std::pair<int,Real> > RWL=it->rwl();
                 for (int i=0; i<RWL.size(); ++i) {
                     int rxn = RWL[i].first;
@@ -447,14 +462,14 @@ main (int   argc,
                     int thisSgn;
                     for (int j=0; j<specCoefs.size(); ++j)
                     {
-                        if (specCoefs[j].first == "CH4")
+                        if (specCoefs[j].first == "NC12H26")
                             thisSgn = specCoefs[j].second;
                     }
                     std::string partnerName = "";
                     for (int j=0; j<specCoefs.size(); ++j)
                     {
                         const std::string& sp = specCoefs[j].first;
-                        if (sp != "CH4"  &&  thisSgn*specCoefs[j].second > 0)
+                        if (sp != "NC12H26"  &&  thisSgn*specCoefs[j].second > 0)
                             partnerName = ( partnerName != ""  ?  partnerName + "+" + sp : sp);
                     }
                     if (partnerName=="")

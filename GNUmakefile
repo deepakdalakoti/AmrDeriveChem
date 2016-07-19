@@ -1,4 +1,4 @@
-TOP             = ${HOME}/src/CCSE
+TOP             = ${HOME}
 BOXLIB_HOME     = ${TOP}/BoxLib
 AMRVIS_HOME     = ${BOXLIB_HOME}/Src/Extern/amrdata
 COMBUSTION_HOME = ${TOP}/Combustion
@@ -12,7 +12,7 @@ DIM    	       = 3
 COMP           = g++
 FCOMP          = gfortran
 USE_MPI        = FALSE
-USE_MPI        = TRUE
+USE_MPI        = FALSE
 NEEDS_CHEM     = TRUE
 EBASE          = replaceXwithC
 EBASE          = pmfTest

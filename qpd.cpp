@@ -15,7 +15,7 @@ main (int   argc,
     ParmParse pp;
 
     ChemDriver cd;
-    std::string QPDatom="C"; pp.query("QPDatom",QPDatom);
+    std::string QPDatom="H"; pp.query("QPDatom",QPDatom);
     EdgeList edges = cd.getEdges(QPDatom);
 
     for (EdgeList::const_iterator it = edges.begin(); it!=edges.end(); ++it) {
