@@ -1,4 +1,4 @@
-TOP             = ./..
+TOP             = ${HOME}
 BOXLIB_HOME     = ${TOP}/BoxLib
 AMRVIS_HOME     = ${BOXLIB_HOME}/Src/Extern/amrdata
 COMBUSTION_HOME = ${TOP}/Combustion
@@ -12,28 +12,34 @@ DIM    	       = 3
 COMP           = intel
 FCOMP          = intel
 USE_MPI        = FALSE
-USE_MPI        = TRUE
+USE_MPI        = FALSE
 NEEDS_CHEM     = TRUE
-EBASE          = replaceXwithC
-EBASE          = gradT
+#EBASE          = replaceXwithC
+#EBASE          = gradT
 EBASE 	       = AmrDeriveMixtureFrac_edited
 #EBASE          = getConditionalAvg
 #EBASE          = budget
 #EBASE          = FlameIndex
 #EBASE          = Damkoh
 #EBASE          = EdgeSpeed
+#EBASE          = pmfTest
+
 USE_SDC        = TRUE
 
-CHEMISTRY_MODEL=CHEMH
-CHEMISTRY_MODEL=PROPANE
-CHEMISTRY_MODEL=GRI12
-CHEMISTRY_MODEL=INERT30
-CHEMISTRY_MODEL=CH4-2STEP
-CHEMISTRY_MODEL=DRM19
-CHEMISTRY_MODEL=LUDME
-#CHEMISTRY_MODEL=LIDRY
+#CHEMISTRY_MODEL=CHEMH
+#CHEMISTRY_MODEL=PROPANE
+#CHEMISTRY_MODEL=INERT30
+#CHEMISTRY_MODEL=CH4-2STEP
+#CHEMISTRY_MODEL=DRM19
+#CHEMISTRY_MODEL=LUDME
 CHEMISTRY_MODEL=DODECANE_LU
+#CHEMISTRY_MODEL=LIDRY
+#CHEMISTRY_MODEL=WANGDODECANE
 #CHEMISTRY_MODEL=GRI30NON
+#CHEMISTRY_MODEL=GRI12
+#CHEMISTRY_MODEL=GLAR
+#CHEMISTRY_MODEL=GRI30
+#CHEMISTRY_MODEL=ALZETA
 
 #CXXFLAGS += -fno-inline -ggdb 
 CFLAGS +="-std=c99"
@@ -88,6 +94,10 @@ ifeq (${NEEDS_CHEM}, TRUE)
     cEXE_sources += grimech30.c
     MODEL_DIR = ${CHEMISTRY_DIR}/data/gri
   endif
+  ifeq (${CHEMISTRY_MODEL}, GRI12)
+    cEXE_sources += grimech12.c
+    MODEL_DIR = ${CHEMISTRY_DIR}/data/gri
+  endif
   ifeq (${CHEMISTRY_MODEL}, LIDRY)
     cEXE_sources += LiDryer.c
     MODEL_DIR = ${CHEMISTRY_DIR}/data/LiDryer
@@ -104,6 +114,10 @@ ifeq (${NEEDS_CHEM}, TRUE)
     cEXE_sources += glarSkel.c
     MODEL_DIR = ${CHEMISTRY_DIR}/data/glar
   endif
+  ifeq (${CHEMISTRY_MODEL}, GLAR)
+    cEXE_sources += glar.c
+    MODEL_DIR = ${CHEMISTRY_DIR}/data/glar
+  endif
   ifeq (${CHEMISTRY_MODEL}, GRI30NON)
     cEXE_sources += grimech30-noArN.c
     MODEL_DIR = ${CHEMISTRY_DIR}/data/gri
@@ -115,6 +129,10 @@ ifeq (${NEEDS_CHEM}, TRUE)
   ifeq (${CHEMISTRY_MODEL}, DODECANE_LU)
     cEXE_sources +=dodecane_lu.c
     MODEL_DIR = ${CHEMISTRY_DIR}/data/dodecane_lu
+  endif
+  ifeq (${CHEMISTRY_MODEL}, ALZETA)
+    cEXE_sources += alzeta.c
+    MODEL_DIR = ${CHEMISTRY_DIR}/data/Alzeta
   endif
 
   VPATH_LOCATIONS += ${MODEL_DIR}:${MODEL_DIR}/PMFs
