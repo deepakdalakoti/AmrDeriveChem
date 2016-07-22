@@ -1418,6 +1418,7 @@ main (int   argc,
         ++cnt;
     }
 
+#if 0
     long min_nonfab_bytes = 
         nodeSet.size() * sizeof(Node) 
         + eltSet.size() * sizeof(Element)
@@ -1447,7 +1448,7 @@ main (int   argc,
                   << max_fab_bytes
                   << "]\n";
     }
-
+#endif
 
     // All relevant data now in "raw" arrays
     nodeSet.clear();
@@ -1457,6 +1458,7 @@ main (int   argc,
     // Communicate node and element info from all procs to IOProc
     Collate(nodeRaw,eltRaw,nComp);
 
+#if 0
     const Real end_time_comm = ParallelDescriptor::second();
     const Real comm_time = end_time_comm - strt_time_comm;
     Real comm_time_max, comm_time_min; comm_time_max = comm_time_min = comm_time;
@@ -1466,6 +1468,7 @@ main (int   argc,
         std::cout << "Max Comm time: " << comm_time_max << '\n';
         std::cout << "Min Comm time: " << comm_time_min << '\n';
     }
+#endif
  
     if (ParallelDescriptor::IOProcessor())
     {
@@ -1636,9 +1639,10 @@ main (int   argc,
                 // Clear out some memory now
                 sortedNodes.clear(); 
                 nodeSet.clear();
-
+#if 0
                 if (verbose)
                     cout << "Total memory presently allocated on I/O proc in fab data: " << BoxLib::total_bytes_allocated_in_fabs << " bytes" << endl;
+#endif
 
                 // Now allocate final fabdata, and populate with file data
                 if (verbose)

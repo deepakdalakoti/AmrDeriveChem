@@ -1,4 +1,5 @@
-TOP             = ${HOME}
+#TOP             = ../../..
+TOP             = ${HOME}/src/CCSE
 BOXLIB_HOME     = ${TOP}/BoxLib
 AMRVIS_HOME     = ${BOXLIB_HOME}/Src/Extern/amrdata
 COMBUSTION_HOME = ${TOP}/Combustion
@@ -12,25 +13,37 @@ DIM    	       = 3
 COMP           = g++
 FCOMP          = gfortran
 USE_MPI        = FALSE
-USE_MPI        = FALSE
+USE_MPI        = TRUE
 NEEDS_CHEM     = TRUE
+
+#EBASE          = replaceYwithC
+#EBASE          = replaceYwithXTPhi
+#NEEDS_FORT     = FALSE
+
+#EBASE          = AmrDeriveCombinePlts
+#NEEDS_FORT     = FALSE
+
+#EBASE          = gradT
+#EBASE          = AmrDeriveIso
+#NEEDS_FORT     = TRUE
+#NEEDS_CHEM     = FALSE
+
 EBASE          = replaceXwithC
-EBASE          = pmfTest
+EBASE          = AmrDeriveCD
 USE_SDC        = TRUE
+
 
 CHEMISTRY_MODEL=CHEMH
 CHEMISTRY_MODEL=PROPANE
+CHEMISTRY_MODEL=GRI12
 CHEMISTRY_MODEL=INERT30
 CHEMISTRY_MODEL=CH4-2STEP
 CHEMISTRY_MODEL=DRM19
-CHEMISTRY_MODEL=LUDME
-CHEMISTRY_MODEL=LIDRY
-CHEMISTRY_MODEL=WANGDODECANE
 CHEMISTRY_MODEL=GRI30NON
-CHEMISTRY_MODEL=GRI12
-CHEMISTRY_MODEL=GLAR
-CHEMISTRY_MODEL=GRI30
-CHEMISTRY_MODEL=ALZETA
+CHEMISTRY_MODEL=GRIMECH30NOARN
+#CHEMISTRY_MODEL=LUDME
+#CHEMISTRY_MODEL=LIDRY
+#CHEMISTRY_MODEL=DODECANEWANG
 
 #CXXFLAGS += -fno-inline -ggdb 
 CFLAGS +="-std=c99"
@@ -72,6 +85,10 @@ ifeq (${USE_SDC}, TRUE)
 endif
 
 ifeq (${NEEDS_CHEM}, TRUE)
+  ifeq (${CHEMISTRY_MODEL}, ALZETA)
+    cEXE_sources += alzeta.c
+    MODEL_DIR = ${CHEMISTRY_DIR}/data/Alzeta
+  endif
   ifeq (${CHEMISTRY_MODEL}, DRM19)
     cEXE_sources += drm19.c
     MODEL_DIR = ${CHEMISTRY_DIR}/data/gri
@@ -112,15 +129,10 @@ ifeq (${NEEDS_CHEM}, TRUE)
     cEXE_sources += grimech30-noArN.c
     MODEL_DIR = ${CHEMISTRY_DIR}/data/gri
   endif
-  ifeq (${CHEMISTRY_MODEL}, WANGDODECANE)
+  ifeq (${CHEMISTRY_MODEL}, DODECANEWANG)
     cEXE_sources += dodecane_wang.c
     MODEL_DIR = ${CHEMISTRY_DIR}/data/dodecane_wang
   endif
-  ifeq (${CHEMISTRY_MODEL}, ALZETA)
-    cEXE_sources += alzeta.c
-    MODEL_DIR = ${CHEMISTRY_DIR}/data/Alzeta
-  endif
-
 
   VPATH_LOCATIONS += ${MODEL_DIR}:${MODEL_DIR}/PMFs
 
