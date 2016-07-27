@@ -15,6 +15,7 @@
 #include "getReactionRates_F.H"
 #include "getJPDF_F.H"
 #include "preProcessing.H"
+#include "WritePlotFile.H"
 
 typedef ChemDriver::Edge Edge;
 typedef std::list<Edge> EdgeList;
@@ -40,7 +41,7 @@ main (int   argc,
     
     
     DataServices::SetBatchMode();
-    FileType fileType(NEWPLT);
+    Amrvis::FileType fileType(Amrvis::NEWPLT);
     DataServices dataServices(infile, fileType);
     if (!dataServices.AmrDataOk())
        DataServices::Dispatch(DataServices::ExitRequest, NULL);    
@@ -293,7 +294,7 @@ main (int   argc,
     
     bool verb=true;
     AmrData& a = amrData;
-    writePlotfile(outState, a.Time(),a.ProbLo(),a.ProbHi(),a.RefRatio(),a.ProbDomain(),
+    WritePlotfile("NavierStokes-V1.1",outState, a.Time(),a.ProbLo(),a.ProbHi(),a.RefRatio(),a.ProbDomain(),
                   a.DxLevel(),a.CoordSys(),outfile,names,verb);
     
     if (ParallelDescriptor::IOProcessor())
