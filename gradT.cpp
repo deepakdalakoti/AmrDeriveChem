@@ -37,16 +37,16 @@ void
 print_usage (int,
              char* argv[])
 {
-	std::cerr << "usage:\n";
-    std::cerr << argv[0] << " infile plotFileNames=f1 f2 <where time(f1)<time(f2)> [options] \n\tOptions:\n";
-    exit(1);
+  std::cerr << "usage:\n";
+  std::cerr << argv[0] << " infile plotFileNames=f1 f2 <where time(f1)<time(f2)> [options] \n\tOptions:\n";
+  exit(1);
 }
 
 std::string
 getFileRoot(const std::string& infile)
 {
-    vector<std::string> tokens = BoxLib::Tokenize(infile,std::string("/"));
-    return tokens[tokens.size()-1];
+  vector<std::string> tokens = BoxLib::Tokenize(infile,std::string("/"));
+  return tokens[tokens.size()-1];
 }
 
 int
