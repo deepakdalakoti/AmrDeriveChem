@@ -17,6 +17,7 @@ using std::endl;
 #include "ParallelDescriptor.H"
 #include "DataServices.H"
 #include "Utility.H"
+#include "WritePlotFile.H"
 
 //
 // This MUST be defined if don't have pubsetbuf() in I/O Streams Library.
@@ -44,53 +45,6 @@ PrintUsage (const char* progName)
     cout << '\n';
     exit(1);
 }
-
-static
-vector<std::string>
-Tokenize (const std::string& instr,
-          const std::string& separators)
-{
-    vector<char*> ptr;
-    //
-    // Make copy of line that we can modify.
-    //
-    char* line = new char[instr.size()+1];
-
-    (void) strcpy(line, instr.c_str());
-
-    char* token = 0;
-
-    if (!((token = strtok(line, separators.c_str())) == 0))
-    {
-        ptr.push_back(token);
-        while (!((token = strtok(0, separators.c_str())) == 0))
-            ptr.push_back(token);
-    }
-
-    vector<std::string> tokens(ptr.size());
-
-    for (int i = 1; i < ptr.size(); i++)
-    {
-        char* p = ptr[i];
-
-        while (strchr(separators.c_str(), *(p-1)) != 0)
-            *--p = 0;
-    }
-
-    for (int i = 0; i < ptr.size(); i++)
-        tokens[i] = ptr[i];
-
-    delete line;
-
-    return tokens;
-}
-
-void WritePlotFile(const PArray<MultiFab>&   mfa,
-                   const Array<std::string>& names,
-		   AmrData&                  amrdToMimic,
-		   const std::string&        oFile,
-                   const Box&                subbox,
-		   bool                      verbose);
 
 static Array< Array<int> > contigLists(const Array<int> orig);
 
@@ -121,7 +75,7 @@ main (int   argc,
 
     pp.get("infile",infile);
 
-    vector<std::string> pieces = Tokenize(infile,std::string("/"));
+    vector<std::string> pieces = BoxLib::Tokenize(infile,std::string("/"));
     std::string outfile = pieces[pieces.size()-1] + std::string("_section");
     pp.query("outfile",outfile);
 
@@ -206,7 +160,10 @@ main (int   argc,
     }
 
     // Write out the subregion pltfile
-    WritePlotFile(data_sub,names,amrData,outfile,subboxes[0],verbose);
+    WritePlotfile("NavierStokes-V1.1",data_sub,amrData.Time(),amrData.ProbLo(),amrData.ProbHi(),
+                  amrData.RefRatio(),amrData.ProbDomain(),amrData.DxLevel(),amrData.CoordSys(),
+                  outfile,names,verbose);
+    //WritePlotFile(data_sub,names,amrData,outfile,subboxes[0],verbose);
     
     BoxLib::Finalize();
     return 0;

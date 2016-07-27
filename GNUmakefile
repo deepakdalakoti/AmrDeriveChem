@@ -4,6 +4,7 @@ BOXLIB_HOME     = ${TOP}/BoxLib
 AMRVIS_HOME     = ${BOXLIB_HOME}/Src/Extern/amrdata
 COMBUSTION_HOME = ${TOP}/Combustion
 CHEMISTRY_DIR   = ${COMBUSTION_HOME}/Chemistry
+PROCESSING_DIR  = ${TOP}/Processing/AmrPostprocessing/C_Src
 
 PRECISION      = DOUBLE
 DEBUG	       = FALSE
@@ -69,16 +70,16 @@ Blocs	+= $(foreach dir, $(Bdirs), $(dir))
 
 include $(Bpack)
 
-INCLUDE_LOCATIONS += $(Blocs) ${BOXLIB_HOME}/Src/C_AMRLib
-VPATH_LOCATIONS   += $(Blocs) ${BOXLIB_HOME}/Src/C_AMRLib
+INCLUDE_LOCATIONS += $(Blocs) ${BOXLIB_HOME}/Src/C_AMRLib ${PROCESSING_DIR}
+VPATH_LOCATIONS   += $(Blocs) ${BOXLIB_HOME}/Src/C_AMRLib ${PROCESSING_DIR}
 
 CEXE_sources += ${EBASE}.cpp
 ifeq ($(NEEDS_FORT), TRUE)
   FEXE_sources += ${EBASE}_F.F
 endif
 FEXE_sources += FILCC_$(DIM)D.F
-CEXE_sources += AppendToPlotFile.cpp
-CEXE_headers += AppendToPlotFile.H
+CEXE_sources += AppendToPlotFile.cpp WritePlotFile.cpp
+CEXE_headers += AppendToPlotFile.H WritePlotFile.H
 
 ifeq (${USE_SDC}, TRUE)
   XTRADEFS += -DLMC_SDC
