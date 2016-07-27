@@ -20,6 +20,7 @@ using std::map;
 #include "Utility.H"
 #include "ChemDriver.H"
 #include "ChemDriver_F.H"
+#include "WritePlotFile.H"
 
 #include "convertDRM19toC3H8_F.H"
 #include "ckfuncs.H" /* include to make Fortran-looking ChemKin-based functions visible */
@@ -38,143 +39,6 @@ PrintUsage (char* progName)
 }
 
 #define MEIO ParallelDescriptor::IOProcessor()
-
-void
-writePlotfile(const PArray<MultiFab>&    data,
-              Real                       time,
-              const Array<Real>&         probLo,
-              const Array<Real>&         probHi,
-              const Array<int>&          refRatio,
-              const Array<Box>&          probDomain,
-              const Array<Array<Real> >& dxLevel,
-              int                        coordSys,
-              std::string&               oFile,
-              const Array<std::string>&  names,
-              bool                       verbose)
-{
-    // This is the version of plotfile that will be written
-    std::string plotFileVersion = "NavierStokes-V1.1";
-
-    if (ParallelDescriptor::IOProcessor())
-        if (!BoxLib::UtilCreateDirectory(oFile,0755))
-            BoxLib::CreateDirectoryFailed(oFile);
-    //
-    // Force other processors to wait till directory is built.
-    //
-    ParallelDescriptor::Barrier();
-    
-    std::string oFileHeader(oFile);
-    oFileHeader += "/Header";
-    
-    VisMF::IO_Buffer io_buffer(VisMF::IO_Buffer_Size);
-    
-    std::ofstream os;
-    
-    //os.rdbuf()->pubsetbuf(io_buffer.dataPtr(), io_buffer.size());
-    
-    if (verbose && ParallelDescriptor::IOProcessor())
-        std::cout << "Opening file = " << oFileHeader << '\n';
-    
-    os.open(oFileHeader.c_str(), std::ios::out|std::ios::binary);
-    
-    if (os.fail())
-        BoxLib::FileOpenFailed(oFileHeader);
-    //
-    // Start writing plotfile.
-    //
-    os << plotFileVersion << '\n';
-    int n_var = data[0].nComp();
-    os << n_var << '\n';
-    for (int n = 0; n < n_var; n++) os << names[n] << '\n';
-    os << BL_SPACEDIM << '\n';
-    os << time << '\n';
-    const int finestLevel = data.size() - 1;
-    os << finestLevel << '\n';
-    for (int i = 0; i < BL_SPACEDIM; i++) os << probLo[i] << ' ';
-    os << '\n';
-    for (int i = 0; i < BL_SPACEDIM; i++) os << probHi[i] << ' ';
-    os << '\n';
-    for (int i = 0; i < finestLevel; i++) os << refRatio[i] << ' ';
-    os << '\n';
-    for (int i = 0; i <= finestLevel; i++) os << probDomain[i] << ' ';
-    os << '\n';
-    for (int i = 0; i <= finestLevel; i++) os << 0 << ' ';
-    os << '\n';
-    for (int i = 0; i <= finestLevel; i++)
-    {
-        for (int k = 0; k < BL_SPACEDIM; k++)
-            os << dxLevel[i][k] << ' ';
-        os << '\n';
-    }
-    os << coordSys << '\n';
-    os << "0\n"; // The bndry data width.
-    //
-    // Write out level by level.
-    //
-    for (int iLevel = 0; iLevel <= finestLevel; ++iLevel)
-    {
-        //
-        // Write state data.
-        //
-        const BoxArray& ba = data[iLevel].boxArray();
-        int nGrids = ba.size();
-        char buf[64];
-        sprintf(buf, "Level_%d", iLevel);
-        
-        if (ParallelDescriptor::IOProcessor())
-        {
-            os << iLevel << ' ' << nGrids << ' ' << time << '\n';
-            os << 0 << '\n';
-            
-            for (int i = 0; i < nGrids; ++i)
-            {
-                const Box& b = ba[i];
-                for (int n = 0; n < BL_SPACEDIM; n++)
-                {
-                    Real glo = b.smallEnd()[n]*dxLevel[iLevel][n];
-                    Real ghi = (b.bigEnd()[n]+1)*dxLevel[iLevel][n];
-                    os << glo << ' ' << ghi << '\n';
-                }
-            }
-            //
-            // Build the directory to hold the MultiFabs at this level.
-            //
-            std::string Level(oFile);
-            Level += '/';
-            Level += buf;
-            
-            if (!BoxLib::UtilCreateDirectory(Level, 0755))
-                BoxLib::CreateDirectoryFailed(Level);
-        }
-        //
-        // Force other processors to wait till directory is built.
-        //
-        ParallelDescriptor::Barrier();
-        //
-        // Now build the full relative pathname of the MultiFab.
-        //
-        static const std::string MultiFabBaseName("/MultiFab");
-        
-        std::string PathName(oFile);
-        PathName += '/';
-        PathName += buf;
-        PathName += MultiFabBaseName;
-        
-        if (ParallelDescriptor::IOProcessor())
-        {
-            //
-            // The full name relative to the Header file.
-            //
-            std::string RelativePathName(buf);
-            RelativePathName += '/';
-            RelativePathName += MultiFabBaseName;
-            os << RelativePathName << '\n';
-        }
-        VisMF::Write(data[iLevel], PathName, VisMF::OneFilePerCPU);
-    }
-    
-    os.close();
-}
 
 // Set of ChemKin funcs I need to see for the "old" mech
 extern "C" {
@@ -1757,7 +1621,8 @@ Convert (const FArrayBox&   T_old,
             
             // Find temperature of stream2 fluid
             Real Told2=Ttmp;
-            int Niter = FORT_TfromHYpt(&Told2,&hmix2,YtmpO.dataPtr(),&errMAX,&NiterMAX,res.dataPtr());
+	    BoxLib::Abort("FIXME");
+            //int Niter = FORT_TfromHYpt(&Told2,&hmix2,YtmpO.dataPtr(),&errMAX,&NiterMAX,res.dataPtr());
             FORT_CONVERT_DRM19_TO_C3H8(&Told2, Xnew2.dataPtr());
             Tnew2 = Xnew2[Xnew2.size()-1];
             CKXTY_new(Xnew2.dataPtr(),&iwrk,&rwrk,Ynew2.dataPtr());
@@ -1768,7 +1633,8 @@ Convert (const FArrayBox&   T_old,
                 Ynew[i] = alpha2*Ynew2[i] + alpha1*Ynew1[i];
             hmix = alpha1*hmix1 + alpha2*hmix2;
             Tnew = Tnew2; // Initial guess
-            Niter = FORT_TfromHYpt_new(&Tnew,&hmix,Ynew.dataPtr(),&errMAX,&NiterMAX,res.dataPtr());
+	    BoxLib::Abort("FIXME");
+            //Niter = FORT_TfromHYpt_new(&Tnew,&hmix,Ynew.dataPtr(),&errMAX,&NiterMAX,res.dataPtr());
         }
         else
         {
@@ -1808,11 +1674,10 @@ main (int   argc,
     int verbose=0; pp.query("verbose",verbose);
     if (verbose>1) AmrData::SetVerbose(true);
     
-    string tranfile="tran.asc.propane"; pp.query("tranfile",tranfile);
-    ChemDriver cd(tranfile);
+    ChemDriver cd;
 
     DataServices::SetBatchMode();
-    FileType fileType(NEWPLT);
+    Amrvis::FileType fileType(Amrvis::NEWPLT);
     
     DataServices dataServices(ifile, fileType);
 
@@ -1932,7 +1797,7 @@ main (int   argc,
 
     const AmrData& a = amrData;
     bool verb = true;
-    writePlotfile(mfout,a.Time(),a.ProbLo(),a.ProbHi(),a.RefRatio(),a.ProbDomain(),
+    WritePlotfile("NavierStokes-V1.1",mfout,a.Time(),a.ProbLo(),a.ProbHi(),a.RefRatio(),a.ProbDomain(),
                   a.DxLevel(),a.CoordSys(),ofile,newPlotNames,verb);
 
     BoxLib::Finalize();
