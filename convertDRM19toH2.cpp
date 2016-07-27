@@ -20,6 +20,7 @@ using std::map;
 #include "Utility.H"
 #include "ChemDriver.H"
 #include "ChemDriver_F.H"
+#include "WritePlotFile.H"
 
 #include "convertDRM19toH2_F.H"
 #include "ckfuncs.H" /* include to make Fortran-looking ChemKin-based functions visible */
@@ -681,7 +682,8 @@ ConvertDRM19toH2 (const FArrayBox&   T_old,
             
             // Find temperature of stream2 fluid
             Real Told2=Ttmp;
-            int Niter = FORT_TfromHYpt(&Told2,&hmix2,YtmpO.dataPtr(),&errMAX,&NiterMAX,res.dataPtr());
+	    BoxLib::Abort("FIXME");
+            //int Niter = FORT_TfromHYpt(&Told2,&hmix2,YtmpO.dataPtr(),&errMAX,&NiterMAX,res.dataPtr());
             FORT_CONVERT_DRM19_TO_H2(&Told2, Xnew2.dataPtr());
             Tnew2 = Xnew2[Xnew2.size()-1];
             CKXTY_new(Xnew2.dataPtr(),&iwrk,&rwrk,Ynew2.dataPtr());
@@ -692,7 +694,8 @@ ConvertDRM19toH2 (const FArrayBox&   T_old,
                 Ynew[i] = alpha2*Ynew2[i] + alpha1*Ynew1[i];
             hmix = alpha1*hmix1 + alpha2*hmix2;
             Tnew = Tnew2; // Initial guess
-            Niter = FORT_TfromHYpt_new(&Tnew,&hmix,Ynew.dataPtr(),&errMAX,&NiterMAX,res.dataPtr());
+	    BoxLib::Abort("FIXME");
+            //Niter = FORT_TfromHYpt_new(&Tnew,&hmix,Ynew.dataPtr(),&errMAX,&NiterMAX,res.dataPtr());
         }
         else
         {
@@ -732,11 +735,10 @@ main (int   argc,
     int verbose=0; pp.query("verbose",verbose);
     if (verbose>1) AmrData::SetVerbose(true);
     
-    string tranfile="tran.asc.drm19"; pp.query("tranfile",tranfile);
-    ChemDriver cd(tranfile);
+    ChemDriver cd;
 
     DataServices::SetBatchMode();
-    FileType fileType(NEWPLT);
+    Amrvis::FileType fileType(Amrvis::NEWPLT);
     
     DataServices dataServices(ifile, fileType);
 
@@ -865,7 +867,7 @@ main (int   argc,
 
     const AmrData& a = amrData;
     bool verb = true;
-    writePlotfile(mfout,a.Time(),a.ProbLo(),a.ProbHi(),a.RefRatio(),a.ProbDomain(),
+    WritePlotfile("NavierStokes-V1.1",mfout,a.Time(),a.ProbLo(),a.ProbHi(),a.RefRatio(),a.ProbDomain(),
                   a.DxLevel(),a.CoordSys(),ofile,newPlotNames,verb);
 
     BoxLib::Finalize();
