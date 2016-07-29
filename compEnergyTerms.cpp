@@ -24,6 +24,7 @@
 #include "ChemDriver.H"
 #include "ChemDriver_F.H"
 #include "compEnergyTerms_F.H"
+#include "WritePlotFile.H"
 
 using std::cout;
 using std::cerr;
@@ -38,12 +39,7 @@ using std::endl;
 int main (int   argc, char* argv[]){
    BoxLib::Initialize(argc,argv);
    
-   if (argc < 2)
-      print_usage(argc,argv);
    ParmParse pp;
-     
-   if (pp.contains("help"))
-      print_usage(argc,argv);
      
    int verbose=0; pp.query("verbose",verbose);
    if (verbose>1) AmrData::SetVerbose(true);
@@ -51,13 +47,10 @@ int main (int   argc, char* argv[]){
    std::string plotFileName; pp.get("infile",plotFileName);
    std::string outfile(getFileRoot(plotFileName) + "_energyTerms"); pp.query("outfile",outfile);
    
-   //std::string TransportFile="tran.asc.chem-H"; pp.query("TransportFile",TransportFile);
-   std::string TransportFile="tran.asc.drm19"; pp.query("TransportFile",TransportFile);
-   
-   ChemDriver cd(TransportFile);
+   ChemDriver cd;
   
    DataServices::SetBatchMode();
-   FileType fileType(NEWPLT);
+   Amrvis::FileType fileType(Amrvis::NEWPLT);
   
    DataServices dataServices(plotFileName, fileType);
    if( ! dataServices.AmrDataOk()) {
@@ -164,7 +157,7 @@ int main (int   argc, char* argv[]){
       inState.FillBoundary(0,nCompIn);
       geoms[lev].FillPeriodicBoundary(inState,0,nCompIn,do_corners);
    
-      FArrayBox Y,H,RhoD,Ht,Cpmix;
+      FArrayBox Y,H,RhoD,Ht,Cpmix,mixMolecW;
       for (MFIter mfi(inState); mfi.isValid(); ++mfi)
          {
             const Box& vbox = mfi.validbox();
@@ -282,7 +275,7 @@ int main (int   argc, char* argv[]){
    }
    bool verb=true;
    AmrData& a = amrData;
-   writePlotfile(outState, a.Time(),a.ProbLo(),a.ProbHi(),a.RefRatio(),a.ProbDomain(),
+   WritePlotfile("NavierStokes-V1.1", outState, a.Time(),a.ProbLo(),a.ProbHi(),a.RefRatio(),a.ProbDomain(),
                  a.DxLevel(),a.CoordSys(),outfile,names,verb);
    
   

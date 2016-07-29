@@ -1,8 +1,10 @@
+#TOP             = ../../..
 TOP             = ${HOME}/src/CCSE
 BOXLIB_HOME     = ${TOP}/BoxLib
 AMRVIS_HOME     = ${BOXLIB_HOME}/Src/Extern/amrdata
 COMBUSTION_HOME = ${TOP}/Combustion
 CHEMISTRY_DIR   = ${COMBUSTION_HOME}/Chemistry
+PROCESSING_DIR  = ${TOP}/Processing/AmrPostprocessing/C_Src
 
 PRECISION      = DOUBLE
 DEBUG	       = TRUE
@@ -11,26 +13,38 @@ DIM    	       = 3
 DIM    	       = 2
 COMP           = g++
 FCOMP          = gfortran
-USE_MPI        = TRUE
 USE_MPI        = FALSE
+USE_MPI        = TRUE
 NEEDS_CHEM     = TRUE
+
+#EBASE          = replaceYwithC
+#EBASE          = replaceYwithXTPhi
+#NEEDS_FORT     = FALSE
+
+#EBASE          = AmrDeriveCombinePlts
+#NEEDS_FORT     = FALSE
+
+#EBASE          = gradT
+#EBASE          = AmrDeriveIso
+#NEEDS_FORT     = TRUE
+#NEEDS_CHEM     = FALSE
+
 EBASE          = replaceXwithC
-EBASE          = pmfTest
+EBASE          = AmrDeriveCD
 USE_SDC        = TRUE
+
 
 CHEMISTRY_MODEL=CHEMH
 CHEMISTRY_MODEL=PROPANE
+CHEMISTRY_MODEL=GRI12
 CHEMISTRY_MODEL=INERT30
 CHEMISTRY_MODEL=CH4-2STEP
 CHEMISTRY_MODEL=DRM19
-CHEMISTRY_MODEL=LUDME
-CHEMISTRY_MODEL=LIDRY
-CHEMISTRY_MODEL=WANGDODECANE
 CHEMISTRY_MODEL=GRI30NON
-CHEMISTRY_MODEL=GRI12
-CHEMISTRY_MODEL=GLAR
-CHEMISTRY_MODEL=GRI30
-CHEMISTRY_MODEL=ALZETA
+CHEMISTRY_MODEL=GRIMECH30NOARN
+#CHEMISTRY_MODEL=LUDME
+#CHEMISTRY_MODEL=LIDRY
+#CHEMISTRY_MODEL=DODECANEWANG
 
 #CXXFLAGS += -fno-inline -ggdb 
 CFLAGS +="-std=c99"
@@ -59,22 +73,26 @@ Blocs	+= $(foreach dir, $(Bdirs), $(dir))
 
 include $(Bpack)
 
-INCLUDE_LOCATIONS += $(Blocs) ${BOXLIB_HOME}/Src/C_AMRLib
-VPATH_LOCATIONS   += $(Blocs) ${BOXLIB_HOME}/Src/C_AMRLib
+INCLUDE_LOCATIONS += $(Blocs) ${BOXLIB_HOME}/Src/C_AMRLib ${PROCESSING_DIR}
+VPATH_LOCATIONS   += $(Blocs) ${BOXLIB_HOME}/Src/C_AMRLib ${PROCESSING_DIR}
 
 CEXE_sources += ${EBASE}.cpp
 ifeq ($(NEEDS_FORT), TRUE)
   FEXE_sources += ${EBASE}_F.F
 endif
 FEXE_sources += FILCC_$(DIM)D.F
-CEXE_sources += AppendToPlotFile.cpp
-CEXE_headers += AppendToPlotFile.H
+CEXE_sources += AppendToPlotFile.cpp WritePlotFile.cpp
+CEXE_headers += AppendToPlotFile.H WritePlotFile.H
 
 ifeq (${USE_SDC}, TRUE)
   XTRADEFS += -DLMC_SDC
 endif
 
 ifeq (${NEEDS_CHEM}, TRUE)
+  ifeq (${CHEMISTRY_MODEL}, ALZETA)
+    cEXE_sources += alzeta.c
+    MODEL_DIR = ${CHEMISTRY_DIR}/data/Alzeta
+  endif
   ifeq (${CHEMISTRY_MODEL}, DRM19)
     cEXE_sources += drm19.c
     MODEL_DIR = ${CHEMISTRY_DIR}/data/gri
@@ -115,15 +133,10 @@ ifeq (${NEEDS_CHEM}, TRUE)
     cEXE_sources += grimech30-noArN.c
     MODEL_DIR = ${CHEMISTRY_DIR}/data/gri
   endif
-  ifeq (${CHEMISTRY_MODEL}, WANGDODECANE)
+  ifeq (${CHEMISTRY_MODEL}, DODECANEWANG)
     cEXE_sources += dodecane_wang.c
     MODEL_DIR = ${CHEMISTRY_DIR}/data/dodecane_wang
   endif
-  ifeq (${CHEMISTRY_MODEL}, ALZETA)
-    cEXE_sources += alzeta.c
-    MODEL_DIR = ${CHEMISTRY_DIR}/data/Alzeta
-  endif
-
 
   VPATH_LOCATIONS += ${MODEL_DIR}:${MODEL_DIR}/PMFs
 
