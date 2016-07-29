@@ -1,18 +1,20 @@
-TOP             = ${HOME}
+TOP             = ..
+#TOP             = ${HOME}/src/CCSE
 BOXLIB_HOME     = ${TOP}/BoxLib
 AMRVIS_HOME     = ${BOXLIB_HOME}/Src/Extern/amrdata
 COMBUSTION_HOME = ${TOP}/Combustion
 CHEMISTRY_DIR   = ${COMBUSTION_HOME}/Chemistry
+PROCESSING_DIR  = ${TOP}/AmrPostprocessing/C_Src
 
 PRECISION      = DOUBLE
 DEBUG	       = TRUE
 PROFILE        = FALSE
-DIM    	       = 2
 DIM    	       = 3
 COMP           = intel
 FCOMP          = intel
+
 USE_MPI        = FALSE
-USE_MPI        = FALSE
+USE_MPI        = TRUE
 NEEDS_CHEM     = TRUE
 #EBASE          = replaceXwithC
 #EBASE          = gradT
@@ -58,6 +60,9 @@ Bdirs   += ${BOXLIB_HOME}/Src/C_BaseLib
 Bdirs   += ${BOXLIB_HOME}/Src/C_BoundaryLib
 
 DEFINES += -DBL_PARALLEL_IO -DBL_NOLINEVALUES
+
+DEFINES += -DALWAYS_NEW_J
+
 Bdirs   += ${AMRVIS_HOME}
 
 Bpack	+= $(foreach dir, $(Bdirs), $(dir)/Make.package)
@@ -65,8 +70,8 @@ Blocs	+= $(foreach dir, $(Bdirs), $(dir))
 
 include $(Bpack)
 
-INCLUDE_LOCATIONS += $(Blocs) ${BOXLIB_HOME}/Src/C_AMRLib
-VPATH_LOCATIONS   += $(Blocs) ${BOXLIB_HOME}/Src/C_AMRLib
+INCLUDE_LOCATIONS += $(Blocs) ${BOXLIB_HOME}/Src/C_AMRLib ${PROCESSING_DIR}
+VPATH_LOCATIONS   += $(Blocs) ${BOXLIB_HOME}/Src/C_AMRLib ${PROCESSING_DIR}
 
 CEXE_sources += ${EBASE}.cpp
 ifeq ($(NEEDS_FORT), TRUE)
@@ -74,14 +79,18 @@ ifeq ($(NEEDS_FORT), TRUE)
 endif
 
 FEXE_sources += FILCC_$(DIM)D.F
-CEXE_sources += AppendToPlotFile.cpp
-CEXE_headers += AppendToPlotFile.H
+CEXE_sources += AppendToPlotFile.cpp WritePlotFile.cpp
+CEXE_headers += AppendToPlotFile.H WritePlotFile.H
 
 ifeq (${USE_SDC}, TRUE)
   XTRADEFS += -DLMC_SDC
 endif
 
 ifeq (${NEEDS_CHEM}, TRUE)
+  ifeq (${CHEMISTRY_MODEL}, ALZETA)
+    cEXE_sources += alzeta.c
+    MODEL_DIR = ${CHEMISTRY_DIR}/data/Alzeta
+  endif
   ifeq (${CHEMISTRY_MODEL}, DRM19)
     cEXE_sources += drm19.c
     MODEL_DIR = ${CHEMISTRY_DIR}/data/gri
@@ -122,7 +131,7 @@ ifeq (${NEEDS_CHEM}, TRUE)
     cEXE_sources += grimech30-noArN.c
     MODEL_DIR = ${CHEMISTRY_DIR}/data/gri
   endif
-  ifeq (${CHEMISTRY_MODEL}, WANGDODECANE)
+  ifeq (${CHEMISTRY_MODEL}, DODECANEWANG)
     cEXE_sources += dodecane_wang.c
     MODEL_DIR = ${CHEMISTRY_DIR}/data/dodecane_wang
   endif

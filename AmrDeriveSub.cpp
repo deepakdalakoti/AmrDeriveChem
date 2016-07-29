@@ -17,8 +17,6 @@ using std::endl;
 #include "ParallelDescriptor.H"
 #include "DataServices.H"
 #include "Utility.H"
-
-
 //
 // This MUST be defined if don't have pubsetbuf() in I/O Streams Library.
 //
@@ -255,12 +253,10 @@ main (int   argc,
     }
 
     Array< Array<int> > compsNEW = contigLists(comps);
-    
     int finestLevel = amrData.FinestLevel(); pp.query("finestLevel",finestLevel);
-//    std::cout << finestLevel << std::endl;
     Box subbox = amrData.ProbDomain()[finestLevel];
     Array<int> inBox;
-    int actual_lev=0;
+
     if (int nx=pp.countval("box"))
     {
         pp.getarr("box",inBox,0,nx);
@@ -272,7 +268,6 @@ main (int   argc,
     }
 
     Array<Box> subboxes(finestLevel+1,subbox);
- 
     for (int iLevel = finestLevel-1; iLevel>=0; --iLevel)
         subboxes[iLevel] = BoxLib::coarsen(subboxes[iLevel+1],amrData.RefRatio()[iLevel]);
     for (int iLevel = 1; iLevel<=finestLevel; ++iLevel)
@@ -316,7 +311,7 @@ main (int   argc,
         if (ba_sub.size() > 0)
         {
              actual_lev = iLevel;
-            data_sub.set(iLevel, new MultiFab(ba_sub,comps.size(),0,Fab_allocate));
+           data_sub.set(iLevel, new MultiFab(ba_sub,comps.size(),0,Fab_allocate));
 
             for (int i=0; i<comps.size(); ++i)
             {
@@ -332,11 +327,11 @@ main (int   argc,
     }
 
     // Write out the subregion pltfile
-    writePlotfile(data_sub,amrData.Time(),plo,phi,
+    WritePlotfile(data_sub,amrData.Time(),plo,phi,
                   amrData.RefRatio(),subboxes,amrData.DxLevel(),amrData.CoordSys(),
                   outfile,names,verbose,actual_lev);
   //WritePlotFile(data_sub,names,amrData,outfile,subboxes[0],verbose);
-    
+   
     BoxLib::Finalize();
     return 0;
 }
@@ -367,4 +362,5 @@ static Array< Array<int> > contigLists(const Array<int> orig)
     }
     return res;
 }
+
 

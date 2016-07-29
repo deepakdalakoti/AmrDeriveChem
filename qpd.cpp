@@ -15,11 +15,14 @@ main (int   argc,
     ParmParse pp;
 
     ChemDriver cd;
-    std::string QPDatom="H"; pp.query("QPDatom",QPDatom);
-    EdgeList edges = cd.getEdges(QPDatom);
+    std::string QPDatom="C"; pp.query("QPDatom",QPDatom);
+
+    int PrintVerbose = 0; pp.query("PrintVerbose",PrintVerbose);
+    int HackSplitting = 0; pp.query("HackSplitting",HackSplitting);
+    EdgeList edges = cd.getEdges(QPDatom,PrintVerbose,HackSplitting);
 
     for (EdgeList::const_iterator it = edges.begin(); it!=edges.end(); ++it) {
-      std::cout << *it << std::endl;
+      //std::cout << *it << std::endl;
     }
 
     BoxLib::Finalize();
