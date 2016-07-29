@@ -1,17 +1,17 @@
-TOP             = ${HOME}
+TOP             = ${HOME}/src/CCSE
 BOXLIB_HOME     = ${TOP}/BoxLib
 AMRVIS_HOME     = ${BOXLIB_HOME}/Src/Extern/amrdata
 COMBUSTION_HOME = ${TOP}/Combustion
 CHEMISTRY_DIR   = ${COMBUSTION_HOME}/Chemistry
 
 PRECISION      = DOUBLE
-DEBUG	       = FALSE
+DEBUG	       = TRUE
 PROFILE        = FALSE
-DIM    	       = 2
 DIM    	       = 3
+DIM    	       = 2
 COMP           = g++
 FCOMP          = gfortran
-USE_MPI        = FALSE
+USE_MPI        = TRUE
 USE_MPI        = FALSE
 NEEDS_CHEM     = TRUE
 EBASE          = replaceXwithC
@@ -49,6 +49,9 @@ Bdirs   += ${BOXLIB_HOME}/Src/C_BaseLib
 Bdirs   += ${BOXLIB_HOME}/Src/C_BoundaryLib
 
 DEFINES += -DBL_PARALLEL_IO -DBL_NOLINEVALUES
+
+DEFINES += -DALWAYS_NEW_J
+
 Bdirs   += ${AMRVIS_HOME}
 
 Bpack	+= $(foreach dir, $(Bdirs), $(dir)/Make.package)
