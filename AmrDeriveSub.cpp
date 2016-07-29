@@ -295,6 +295,7 @@ main (int   argc,
 //       psize[i].coarsen(std::pow(amrData.RefRatio()[i],finestLevel-i)); 
 //     }
     
+    int actual_lev = -1;
     for (int iLevel = 0; iLevel <= finestLevel; ++iLevel)
     {
         // Build the BoxArray for the result
@@ -327,7 +328,7 @@ main (int   argc,
     }
 
     // Write out the subregion pltfile
-    WritePlotfile(data_sub,amrData.Time(),plo,phi,
+    writePlotfile(data_sub,amrData.Time(),plo,phi,
                   amrData.RefRatio(),subboxes,amrData.DxLevel(),amrData.CoordSys(),
                   outfile,names,verbose,actual_lev);
   //WritePlotFile(data_sub,names,amrData,outfile,subboxes[0],verbose);
