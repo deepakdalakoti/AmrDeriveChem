@@ -1,0 +1,13 @@
+infile = /project/projectdirs/mp111/Deepak/plt_hwk_01000
+fuelName = CH3OCH3
+Xfu = 0.7
+nX = 64
+nY =64
+varYs = temp 
+varX = xi
+component = Z
+MFbase = Scalar_diss
+append = false 
+geometry.coord_sys = 0
+geometry.prob_lo = -0.00256 -0.00256 0
+geometry.prob_hi = 0.00256 0.00256 0.0064 

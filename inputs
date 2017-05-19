@@ -1,11 +1,57 @@
-infile = /scratch1/scratchdirs/dalakoti/plt_hwk_01295
-whichSpec = OH
+#infile = /global/homes/d/dalakoti/AmrDeriveChem/pl
+isoCompName =Z
+isoVal = 0.064
+isoComp2D =3
+isoVal2D = 1700
+#box = 0 511 0 1023 511 1279
+#box = 1023 0  0 1024 2047 2559
+#box =280 248 0 783 723 800
+#box = 512  0  0 512 1023 1079
+#comps =  6 14 25 69 67 8  71
+#comps = 4 9 10 11 23 30 31 32 34 
+#box = 0 1023 0 2047 1023 2559
+#box = 1200 2047 600 3200 2047 3200
+#box = 0 2047 0 4095 2047 5119
+#ox = 1200 1200  600  3200 3200 3200
+#reacs = 26 27 28 29 30  
+whichSpec = OH 
+#varNames = I_R[rhoY(OH)] temp HeatRelease x_velocity Y(C12H25O2) Y(OH) density
+varNames = I_R[rhoY(OH)] HeatRelease
 fuelName = NC12H26
-geometry.coord_sys =0 
-geometry.prob_lo = -0.0256 -0.0256 0
-geometry.prob_hi = 0.0256 0.0256 0.064 
 Xfu = 1.0
-nX =64
-nY = 64
-varX = Z
-varYs = temp
+#infile = /scratch1/scratchdirs/dalakoti/_coarse/plt_hwk_03520
+#infile = /scratch1/scratchdirs/dalakoti/_coarse/plt_hwk_03520_speed_combined
+#comps = 17 4 69 70 71
+comps = 4 70
+#infile = /scratch1/scratchdirs/dalakoti/Premixed/840/pos1/plt00440
+#infile = plt00660
+#infile = /scratch1/scratchdirs/dalakoti/_coarse/plt_hwk_03520
+
+#infile = /scratch1/scratchdirs/dalakoti/Premixed/840/pos1/plt00560
+#infile = /global/homes/d/dalakoti/Combustion/LMC/bin/DME_jet/840/pos1/plt00560
+#infile = /global/homes/d/dalakoti/Combustion/LMC/bin/DME_jet/840/pos7/plt00460
+append = true
+#finestLevel =3 
+#outfile = test
+#box = 784 784 200 1264 1264 920
+#box = 511 0  0 511 1023  1279
+box 0 0 0 255 255 125
+samplesize = 0.002
+geometry.coord_sys =0 
+geometry.prob_lo = -0.00256 -0.00256 0
+geometry.prob_hi =  0.00256  0.00256 0.0064
+finestLevel = 2
+#geometry.prob_lo = -0.00064  0
+#geometry.prob_hi =  0.00064  0.00032
+
+
+
+
+
+
+
+
+
+
+
+

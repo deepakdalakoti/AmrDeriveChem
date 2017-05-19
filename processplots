@@ -1,0 +1,98 @@
+for pltfile
+do
+
+  echo " "
+  echo " "
+  echo "---------------------------------------------------------------------------------------------"
+  echo "---------------------------------------------------------------------------------------------"
+
+  echo "pltfile = $pltfile"
+
+  echo " "
+  echo " "
+  echo "---------------------------------------------------------------------------------------------"
+
+  echo "mpirun -np 8 ./gradT3d.Linux.Intel.Intel.MPI.ex inputs.process infile=$pltfile"
+  mpirun -np 8 ./gradT3d.Linux.Intel.Intel.MPI.ex inputs.process infile=$pltfile
+
+
+  echo " "
+  echo " "
+  echo "---------------------------------------------------------------------------------------------"
+
+  echo "mpirun -np 8 ./AmrDeriveCombinePlts3d.Linux.Intel.Intel.MPI.ex infileL=$pltfile compsL=0 1 2 3 6 11 12 13 14 15 16 17 18 19 20 21 infileR="$pltfile"_gt compsR=1 2 3 outfile="$pltfile"T"
+  mpirun -np 8 ./AmrDeriveCombinePlts3d.Linux.Intel.Intel.MPI.ex infileL=$pltfile compsL=0 1 2 3 6 11 12 13 14 15 16 17 18 19 20 21 infileR="$pltfile"_gt compsR=1 2 3 outfile="$pltfile"T
+
+
+  echo " "
+  echo " "
+  echo "---------------------------------------------------------------------------------------------"
+
+  echo "mpirun -np 8 ./curvOnly3d.Linux.Intel.Intel.MPI.ex inputs.process plotFileName="$pltfile"T appendPlotFile=1"
+  mpirun -np 8 ./curvOnly3d.Linux.Intel.Intel.MPI.ex inputs.process plotFileName="$pltfile"T appendPlotFile=1
+
+
+
+  echo " "
+  echo " "
+  echo "---------------------------------------------------------------------------------------------"
+
+  echo "mv "$pltfile"T/Header "$pltfile"T/Header_SAVE"
+  mv "$pltfile"T/Header "$pltfile"T/Header_SAVE
+
+  echo "mv "$pltfile"T/NewHeader "$pltfile"T/Header"
+  mv "$pltfile"T/NewHeader "$pltfile"T/Header
+
+
+  echo " "
+  echo " "
+  echo "---------------------------------------------------------------------------------------------"
+
+  echo "mpirun -np 8 ./AmrDeriveIso3d.Linux.Intel.Intel.MPI.ex inputs.stream infile="$pltfile"T isoCompName=temp isoVal=1144 sComp=4 nComp=1"
+  mpirun -np 8 ./AmrDeriveIso3d.Linux.Intel.Intel.MPI.ex inputs.stream infile="$pltfile"T isoCompName=temp isoVal=1144 sComp=4 nComp=1
+
+
+  echo " "
+  echo " "
+  echo "---------------------------------------------------------------------------------------------"
+
+  echo "./qslim3d.Linux.Intel.Intel.ex -t 100000 "$pltfile"T_temp_1144.mef > "$pltfile"T_temp_1144_100000.mef"
+  ./qslim3d.Linux.Intel.Intel.ex -t 100000 "$pltfile"T_temp_1144.mef > "$pltfile"T_temp_1144_100000.mef
+
+
+  echo " "
+  echo " "
+  echo "---------------------------------------------------------------------------------------------"
+
+  echo "mpirun -np 8 ./stream3d.Linux.Intel.Intel.MPI.ex inputs.stream plotfile="$pltfile"T isoFile="$pltfile"T_temp_1144_100000.mef streamFile=stream_"$pltfile""
+  mpirun -np 8 ./stream3d.Linux.Intel.Intel.MPI.ex inputs.stream plotfile="$pltfile"T isoFile="$pltfile"T_temp_1144_100000.mef streamFile=stream_"$pltfile"
+
+
+  echo " "
+  echo " "
+  echo "---------------------------------------------------------------------------------------------"
+
+  echo "mpirun -np 8 ./sampleStreamlines3d.Linux.Intel.Intel.MPI.ex inputs.stream plotfile="$pltfile"T isoFile="$pltfile"T_temp_1144_100000.mef pathFile=stream_"$pltfile""
+  mpirun -np 8 ./sampleStreamlines3d.Linux.Intel.Intel.MPI.ex inputs.stream plotfile="$pltfile"T isoFile="$pltfile"T_temp_1144_100000.mef pathFile=stream_"$pltfile"
+
+
+  echo " "
+  echo " "
+  echo "---------------------------------------------------------------------------------------------"
+
+  echo "./eltPathInt3d.Linux.Intel.Intel.ex infile=stream_"$pltfile"_sampled_from_"$pltfile"T intComps=19 avgComps=25 26 27 19 verbose=2 jlo=-50 write_mef=1"
+  ./eltPathInt3d.Linux.Intel.Intel.ex infile=stream_"$pltfile"_sampled_from_"$pltfile"T intComps=19 avgComps=25 26 27 19 verbose=2 jlo=-50 write_mef=1
+
+
+  echo " "
+  echo " "
+  echo "---------------------------------------------------------------------------------------------"
+
+  echo "./scaleMEF3d.Linux.Intel.Intel.ex infile=stream_"$pltfile"_sampled_from_"$pltfile"T_volInt.mef outfile="$pltfile"_stData.mef comps=6 vals=593.411"
+  ./scaleMEF3d.Linux.Intel.Intel.ex infile=stream_"$pltfile"_sampled_from_"$pltfile"T_volInt.mef outfile="$pltfile"_stData.mef comps=6 vals=593.411
+
+
+  echo "---------------------------------------------------------------------------------------------"
+  echo "---------------------------------------------------------------------------------------------"
+
+done

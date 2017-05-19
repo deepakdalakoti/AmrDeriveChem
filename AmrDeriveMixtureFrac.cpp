@@ -125,8 +125,8 @@ main (int   argc,
     std::cout << "Zstar_fu = " << Zstar_fu << std::endl;
   }
   Array<Real> X_ox(nSpec,0);
-  X_ox[cd.index("O2")] = 0.21;
-  X_ox[cd.index("N2")] = 0.79;
+  X_ox[cd.index("O2")] = 0.15;
+  X_ox[cd.index("N2")] = 0.85;
   Array<Real> Y_ox = cd.moleFracToMassFrac(X_ox);
   std::cout << "Mass frac of O2 in ox: " << Y_ox[cd.index("O2")] << std::endl;
   Array<Real> Z_ox(nElts,0);
@@ -156,7 +156,7 @@ main (int   argc,
   Real numO2stoich = 0.5 * (numOfromCO2 + numOfromH2O - numO);
   Array<Real> X_st(nSpec,0);
 
-  X_st[cd.index(fuelName)] = 1/(1 + numO2stoich*(1 + 0.79/0.21));
+  X_st[cd.index(fuelName)] = 1/(1 + numO2stoich*(1 + 0.85/0.15));
   X_st[cd.index("O2")] = numO2stoich * X_st[cd.index(fuelName)];
   X_st[cd.index("N2")] = 1 - X_st[cd.index(fuelName)] - X_st[cd.index("O2")];
   Array<Real> Y_st = cd.moleFracToMassFrac(X_st);

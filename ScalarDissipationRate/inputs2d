@@ -1,0 +1,13 @@
+fuelName = NC12H26
+Xfu = 1.0
+nX = 64
+nY =64
+varYs = temp 
+varX = xi
+verbose = 1
+component = Z
+MFbase = Scalar_diss
+append = true
+geometry.coord_sys = 0
+geometry.prob_lo = -0.00256 -0.00256 0
+geometry.prob_hi = 0.00256 0.00256 0.0064  

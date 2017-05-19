@@ -1,0 +1,46 @@
+=== Please note that the line number reported by addr2line may not be accurate.
+    If necessary, one can use 'readelf -wl my_exefile | grep my_line_address'
+    to find out the offset for that line.
+
+ 0: [0x551663]
+    BLBackTrace::print_backtrace_info(_IO_FILE*)
+    /global/u1/d/dalakoti/AmrDeriveChem/ScalarDissipationRate/./../../BoxLib/Src/C_BaseLib/BLBackTrace.cpp:80
+    BLBackTrace::handler(int)
+    /global/u1/d/dalakoti/AmrDeriveChem/ScalarDissipationRate/./../../BoxLib/Src/C_BaseLib/BLBackTrace.cpp:43
+
+ 1: [0x48b844]
+    BoxLib::FileOpenFailed(std::string const&)
+    /global/u1/d/dalakoti/AmrDeriveChem/ScalarDissipationRate/./../../BoxLib/Src/C_BaseLib/Utility.cpp:418
+
+ 2: [0x4be458]
+    ParallelDescriptor::ReadAndBcastFile(std::string const&, Array<char>&, bool, int const&)
+    /global/u1/d/dalakoti/AmrDeriveChem/ScalarDissipationRate/./../../BoxLib/Src/C_BaseLib/ParallelDescriptor.cpp:1937
+
+ 3: [0x4c08d2]
+    VisMF::VisMF(std::string const&)
+    /global/u1/d/dalakoti/AmrDeriveChem/ScalarDissipationRate/./../../BoxLib/Src/C_BaseLib/VisMF.cpp:859
+
+ 4: [0x56e60b]
+    std::vector<Array<VisMF*>, std::allocator<Array<VisMF*> > >::operator[](unsigned long)
+    /usr/include/c++/4.3/bits/stl_vector.h:563
+    Array<Array<VisMF*> >::operator[](unsigned long)
+    /global/u1/d/dalakoti/AmrDeriveChem/ScalarDissipationRate/./../../BoxLib/Src/C_BaseLib/Array.H:89
+    AmrData::ReadData(std::string const&, Amrvis::FileType)
+    /global/u1/d/dalakoti/AmrDeriveChem/ScalarDissipationRate/./../../BoxLib/Src/Extern/amrdata/AmrData.cpp:618
+
+ 5: [0x595342]
+    DataServices::DataServices(std::string const&, Amrvis::FileType const&)
+    /global/u1/d/dalakoti/AmrDeriveChem/ScalarDissipationRate/./../../BoxLib/Src/Extern/amrdata/DataServices.cpp:84
+
+ 6: [0x59bbb1]
+    main
+    /global/u1/d/dalakoti/AmrDeriveChem/ScalarDissipationRate/AmrDeriveGRAD.cpp:376
+
+ 7: [0xb3ac81]
+    __libc_start_main
+    /usr/src/packages/BUILD/glibc-2.11.3/csu/libc-start.c:242
+
+ 8: [0x400875]
+    _start
+    /usr/src/packages/BUILD/glibc-2.11.3/csu/../sysdeps/x86_64/elf/start.S:116
+

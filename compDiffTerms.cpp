@@ -174,7 +174,7 @@ main (int   argc,
             cd.moleFracToMassFrac(Y,X,gbox,idXst,0);
             cd.getHGivenT(H,T,gbox,idTst,0);
 
-            const Real Patm = 1.0; 
+            const Real Patm = 60.0; 
             const int do_temp = 1;
             const int do_VelVisc = 0;
 

@@ -1,0 +1,28 @@
+#!/bin/bash -l
+#SBATCH -p debug
+#SBATCH -N 10 
+#SBATCH -t 00:10:00
+#SBATCH -J slices
+#SBATCH -o slurm.o%j
+#SBATCH -L SCRATCH
+
+#Edison has 24 cores per compute node
+
+
+srun -n 240 ./AmrDeriveSlice3d.Linux.Intel.Intel.MPI.DODECANE_LU.ex  inputs2d infile = /scratch1/scratchdirs/dalakoti/plt_hwk_02800
+srun -n 240 ./AmrDeriveSlice3d.Linux.Intel.Intel.MPI.DODECANE_LU.ex  inputs2d infile = /scratch1/scratchdirs/dalakoti/plt_hwk_02810
+srun -n 240 ./AmrDeriveSlice3d.Linux.Intel.Intel.MPI.DODECANE_LU.ex  inputs2d infile = /scratch1/scratchdirs/dalakoti/plt_hwk_02820
+srun -n 240 ./AmrDeriveSlice3d.Linux.Intel.Intel.MPI.DODECANE_LU.ex  inputs2d infile = /scratch1/scratchdirs/dalakoti/plt_hwk_02830
+srun -n 240 ./AmrDeriveSlice3d.Linux.Intel.Intel.MPI.DODECANE_LU.ex  inputs2d infile = /scratch1/scratchdirs/dalakoti/plt_hwk_02840
+srun -n 240 ./AmrDeriveSlice3d.Linux.Intel.Intel.MPI.DODECANE_LU.ex  inputs2d infile = /scratch1/scratchdirs/dalakoti/plt_hwk_02850
+srun -n 240 ./AmrDeriveSlice3d.Linux.Intel.Intel.MPI.DODECANE_LU.ex  inputs2d infile = /scratch1/scratchdirs/dalakoti/plt_hwk_02860
+srun -n 240 ./AmrDeriveSlice3d.Linux.Intel.Intel.MPI.DODECANE_LU.ex  inputs2d infile = /scratch1/scratchdirs/dalakoti/plt_hwk_02870
+srun -n 240 ./AmrDeriveSlice3d.Linux.Intel.Intel.MPI.DODECANE_LU.ex  inputs2d infile = /scratch1/scratchdirs/dalakoti/plt_hwk_02880
+srun -n 240 ./AmrDeriveSlice3d.Linux.Intel.Intel.MPI.DODECANE_LU.ex  inputs2d infile = /scratch1/scratchdirs/dalakoti/plt_hwk_02890
+
+
+
+
+
+
+

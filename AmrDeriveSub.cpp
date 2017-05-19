@@ -45,6 +45,150 @@ PrintUsage (const char* progName)
     exit(1);
 }
 
+void
+writePlotfile(const PArray<MultiFab>&    data,
+              Real                       time,
+              const Array<Real>&         probLo,
+              const Array<Real>&         probHi,
+              const Array<int>&          refRatio,
+              const Array<Box>&          probDomain,
+              const Array<Array<Real> >& dxLevel,
+              int                        coordSys,
+              std::string&               oFile,
+              const Array<std::string>&  names,
+              bool                       verbose)
+{
+    // This is the version of plotfile that will be written
+    std::string plotFileVersion = "NavierStokes-V1.1";
+
+    if (ParallelDescriptor::IOProcessor())
+        if (!BoxLib::UtilCreateDirectory(oFile,0755))
+            BoxLib::CreateDirectoryFailed(oFile);
+    //
+    // Force other processors to wait till directory is built.
+    //
+    ParallelDescriptor::Barrier();
+    
+    std::ofstream os;
+    const int finestLevel = data.size() - 1;
+
+    if (ParallelDescriptor::IOProcessor())
+    {
+
+        std::string oFileHeader(oFile);
+        oFileHeader += "/Header";
+        
+        VisMF::IO_Buffer io_buffer(VisMF::IO_Buffer_Size);
+        
+        //os.rdbuf()->pubsetbuf(io_buffer.dataPtr(), io_buffer.size());
+        
+        if (verbose)
+            std::cout << "Opening file = " << oFileHeader << '\n';
+        
+        os.open(oFileHeader.c_str(), std::ios::out|std::ios::binary);
+        
+        if (os.fail())
+            BoxLib::FileOpenFailed(oFileHeader);
+        //
+        // Start writing plotfile.
+        //
+        os << plotFileVersion << '\n';
+        int n_var = data[0].nComp();
+        os << n_var << '\n';
+        for (int n = 0; n < n_var; n++) os << names[n] << '\n';
+        os << BL_SPACEDIM << '\n';
+        os << time << '\n';
+        os << finestLevel << '\n';
+        for (int i = 0; i < BL_SPACEDIM; i++) os << probLo[i] << ' ';
+        os << '\n';
+        for (int i = 0; i < BL_SPACEDIM; i++) os << probHi[i] << ' ';
+        os << '\n';
+        for (int i = 0; i < finestLevel; i++) os << refRatio[i] << ' ';
+        os << '\n';
+        for (int i = 0; i <= finestLevel; i++) os << probDomain[i] << ' ';
+        os << '\n';
+        for (int i = 0; i <= finestLevel; i++) os << 0 << ' ';
+        os << '\n';
+        for (int i = 0; i <= finestLevel; i++)
+        {
+            for (int k = 0; k < BL_SPACEDIM; k++)
+                os << dxLevel[i][k] << ' ';
+            os << '\n';
+        }
+        os << coordSys << '\n';
+        os << "0\n"; // The bndry data width.
+    }
+
+    //
+    // Write out level by level.
+    //
+    for (int iLevel = 0; iLevel <= finestLevel; ++iLevel)
+    {
+        //
+        // Write state data.
+        //
+        const BoxArray& ba = data[iLevel].boxArray();
+        int nGrids = ba.size();
+        char buf[64];
+        sprintf(buf, "Level_%d", iLevel);
+        
+        if (ParallelDescriptor::IOProcessor())
+        {
+            os << iLevel << ' ' << nGrids << ' ' << time << '\n';
+            os << 0 << '\n';
+            
+            for (int i = 0; i < nGrids; ++i)
+            {
+                const Box& b = ba[i];
+                for (int n = 0; n < BL_SPACEDIM; n++)
+                {
+                    Real glo = b.smallEnd()[n]*dxLevel[iLevel][n];
+                    Real ghi = (b.bigEnd()[n]+1)*dxLevel[iLevel][n];
+                    os << glo << ' ' << ghi << '\n';
+                }
+            }
+            //
+            // Build the directory to hold the MultiFabs at this level.
+            //
+            std::string Level(oFile);
+            Level += '/';
+            Level += buf;
+            
+            if (!BoxLib::UtilCreateDirectory(Level, 0755))
+                BoxLib::CreateDirectoryFailed(Level);
+        }
+        //
+        // Force other processors to wait till directory is built.
+        //
+        ParallelDescriptor::Barrier();
+        //
+        // Now build the full relative pathname of the MultiFab.
+        //
+        static const std::string MultiFabBaseName("/MultiFab");
+        
+        std::string PathName(oFile);
+        PathName += '/';
+        PathName += buf;
+        PathName += MultiFabBaseName;
+        
+        if (ParallelDescriptor::IOProcessor())
+        {
+            //
+            // The full name relative to the Header file.
+            //
+            std::string RelativePathName(buf);
+//            RelativePathName += '/';
+            RelativePathName += MultiFabBaseName;
+            os << RelativePathName << '\n';
+        }
+        VisMF::Write(data[iLevel], PathName, VisMF::OneFilePerCPU);
+    }
+    
+    os.close();
+}
+
+
+
 static Array< Array<int> > contigLists(const Array<int> orig);
 
 int
@@ -65,44 +209,49 @@ main (int   argc,
     //
     // Scan the arguments.
     //
-    std::string infile;
+    Array<std::string> infiles(pp.countval("infiles"));
 
-    bool verbose = verbose_DEF;
-    verbose = (pp.contains("verbose") ? true : false);
-    if (verbose)
-        AmrData::SetVerbose(true);
-
-    pp.get("infile",infile);
-
+     // Read in pltfile and get amrData ref
+     Array<int> comps;
+    pp.getarr("infile",infiles);
+    int nPlot = infiles.size();
+   for (int iPlot= 0; iPlot < nPlot ; iPlot++) {
+          std::string infile = infiles[iPlot];
     vector<std::string> pieces = BoxLib::Tokenize(infile,std::string("/"));
     std::string outfile = pieces[pieces.size()-1] + std::string("_section");
     pp.query("outfile",outfile);
 
-    // Read in pltfile and get amrData ref
+
     DataServices::SetBatchMode();
     Amrvis::FileType fileType(Amrvis::NEWPLT);
     DataServices dataServices(infile, fileType);
     if (!dataServices.AmrDataOk())
         DataServices::Dispatch(DataServices::ExitRequest, NULL);
     AmrData& amrData = dataServices.AmrDataRef();
-
-    Array<int> comps;
-    if (int nc = pp.countval("comps"))
-    {
+     if (int nc = pp.countval("comps"))
+      {
         comps.resize(nc);
         pp.getarr("comps",comps,0,nc);
-    }
+     }
+
     else
+
     {
         int sComp = 0;
         pp.query("sComp",sComp);
         int nComp = amrData.NComp();
         pp.query("nComp",nComp);
-        BL_ASSERT(sComp+nComp < amrData.NComp());
+//        BL_ASSERT(sComp+nComp < amrData.NComp());
         comps.resize(nComp);
         for (int i=0; i<nComp; ++i)
             comps[i] = sComp + i;
     }
+    
+
+    bool verbose = verbose_DEF;
+    verbose = (pp.contains("verbose") ? true : false);
+    if (verbose)
+        AmrData::SetVerbose(true);
 
     Array< Array<int> > compsNEW = contigLists(comps);
     int finestLevel = amrData.FinestLevel(); pp.query("finestLevel",finestLevel);
@@ -167,11 +316,14 @@ main (int   argc,
     }
 
     // Write out the subregion pltfile
-    WritePlotfile("NavierStokes-V1.1",data_sub,amrData.Time(),plo,phi,
+//    WritePlotfile("NavierStokes-V1.1",data_sub,amrData.Time(),plo,phi,
+//                  amrData.RefRatio(),subboxes,amrData.DxLevel(),amrData.CoordSys(),
+//                  outfile,names,verbose);
+   writePlotfile(data_sub,amrData.Time(),plo,phi,
                   amrData.RefRatio(),subboxes,amrData.DxLevel(),amrData.CoordSys(),
                   outfile,names,verbose);
 
-   
+   }//iPlot
     BoxLib::Finalize();
     return 0;
 }

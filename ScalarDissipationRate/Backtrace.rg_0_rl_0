@@ -1,0 +1,22 @@
+=== Please note that the line number reported by addr2line may not be accurate.
+    If necessary, one can use 'readelf -wl my_exefile | grep my_line_address'
+    to find out the offset for that line.
+
+ 0: [0x557e04]
+
+ 1: [0x4efd1b]
+
+ 2: [0x4ed11c]
+
+ 3: [0x4f9411]
+
+ 4: [0x4d5ec8]
+
+ 5: [0x5a99af]
+
+ 6: [0x5a4d17]
+
+ 7: [0xb4c431]
+
+ 8: [0x400875]
+

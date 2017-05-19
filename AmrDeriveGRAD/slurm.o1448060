@@ -1,0 +1,10 @@
+MPI initialized with 240 MPI processes
+Unused ParmParse Variables:
+[TOP]::fuelName(nvals = 1)  :: [CH3OCH3]
+[TOP]::Xfu(nvals = 1)  :: [0.7]
+[TOP]::nX(nvals = 1)  :: [64]
+[TOP]::nY(nvals = 1)  :: [64]
+[TOP]::varYs(nvals = 1)  :: [temp]
+[TOP]::varX(nvals = 1)  :: [xi]
+[TOP]::MFbase(nvals = 1)  :: [Scalar_diss]
+done.

@@ -1,0 +1,15 @@
+#!/bin/bash -l
+#SBATCH -p debug
+#SBATCH -N 10
+#SBATCH -t 00:20:00
+#SBATCH -J my_job
+#SBATCH -o slurm.o%j
+#SBATCH -L SCRATCH
+
+#Edison has 24 cores per compute node
+srun -n 240 ./AmrDeriveSlice3d.Linux.Intel.Intel.MPI.DODECANE_LU.ex  inputs infile = /scratch1/scratchdirs/dalakoti/_coarse/plt_hwk_03520 outfile = /scratch1/scratchdirs/dalakoti/_coarse/plt_hwk_03520_slice 
+
+
+
+
+

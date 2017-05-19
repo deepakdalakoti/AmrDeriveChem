@@ -1,0 +1,8 @@
+infile = ../Combustion/LMC/bin/DME_jet_2/plt00520 
+fuelName = CH3OCH3
+Xfu = 0.7
+nX = 64
+nY =64
+varYs = temp 
+varX = xi
+verbose =1

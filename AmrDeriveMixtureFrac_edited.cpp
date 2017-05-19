@@ -18,6 +18,219 @@ WritePlotFile (const PArray<MultiFab>&   mfout,
                const Array<std::string>& names,
                AmrData&                  amrData);
 
+
+void
+appendToPlotFile(AmrData&                  amrData,
+                 const PArray<MultiFab>&   mfout,
+                 std::string&              oFile,
+                 const Array<std::string>& nnames,
+                 const std::string&        mfBaseName,
+                 bool                      verbose)
+{
+    std::string oFileHeader(oFile);
+    oFileHeader += "/Header";
+    std::string nFileHeader(oFile);
+    nFileHeader += "/NewHeader";
+    
+    VisMF::IO_Buffer io_buffer(VisMF::IO_Buffer_Size);
+    
+    std::ofstream os;
+    std::ifstream is;
+
+    os.precision(17);
+    int finestLevel = mfout.size() - 1;
+    int n_var_copy; 
+    if (ParallelDescriptor::IOProcessor())
+    {
+        if (verbose)
+        {
+            std::cout << "Opening files = " << oFileHeader << " and " << nFileHeader << '\n';
+        }
+        is.open(oFileHeader.c_str(), std::ios::in|std::ios::binary);
+        os.open(nFileHeader.c_str(), std::ios::out|std::ios::binary);
+        
+        if (os.fail())
+            BoxLib::FileOpenFailed(oFileHeader);
+        if (is.fail())
+            BoxLib::FileOpenFailed(nFileHeader);
+        //
+        // Start writing plotfile.
+        //
+        std::string version;
+        is >> version;
+        os << version << '\n';
+        int n_var;
+        is >> n_var;
+        n_var_copy = n_var;
+        os << n_var+nnames.size() << '\n';
+        Array<std::string> inames(n_var);
+        for (int n = 0; n < n_var; n++) is >> inames[n];
+        for (int n = 0; n < n_var; n++) os << inames[n] << '\n';
+        for (int n = 0; n < nnames.size(); n++) os << nnames[n] << '\n';
+        
+        int sdim;
+        is >> sdim;
+        os << sdim << '\n';
+        
+        Real time;
+        is >> time;
+        os << time << '\n';
+        
+        int oFinestLevel;
+        is >> oFinestLevel;
+        
+        BL_ASSERT(oFinestLevel>=finestLevel);
+        os << finestLevel << '\n';
+        
+        Array<Real> probLo(BL_SPACEDIM);
+        for (int i = 0; i < BL_SPACEDIM; i++) is >> probLo[i];
+        for (int i = 0; i < BL_SPACEDIM; i++) os << probLo[i] << ' ';
+        os << '\n';
+        
+        Array<Real> probHi(BL_SPACEDIM);
+        for (int i = 0; i < BL_SPACEDIM; i++) is >> probHi[i];
+        for (int i = 0; i < BL_SPACEDIM; i++) os << probHi[i] << ' ';
+        os << '\n';
+        
+        Array<int> refRatio(oFinestLevel);
+        for (int i = 0; i < oFinestLevel; i++) is >> refRatio[i];
+        for (int i = 0; i < finestLevel; i++) os << refRatio[i] << ' ';
+        os << '\n';
+        
+        Array<Box> probDomain(oFinestLevel+1);
+        for (int i = 0; i <= oFinestLevel; i++) is >> probDomain[i];
+        for (int i = 0; i <= finestLevel; i++) os << probDomain[i] << ' ';
+        os << '\n';
+        
+        int tmpI;
+        for (int i = 0; i <= oFinestLevel; i++) is >> tmpI;
+        for (int i = 0; i <= finestLevel; i++) os << 0 << ' ';
+        os << '\n';
+        
+        Real dx[BL_SPACEDIM];
+        for (int i = 0; i <= oFinestLevel; i++)
+        {
+            for (int k = 0; k < BL_SPACEDIM; k++)
+            {
+                is >> dx[k];
+            }
+            if (i<=finestLevel)
+            {
+                for (int k = 0; k < BL_SPACEDIM; k++)
+                {
+                    os << dx[k] << ' ';
+                }
+                os << '\n';
+            }
+        }
+        
+        int coordSys;
+        is >> coordSys;
+        os << coordSys << '\n';
+        
+        int bndry;
+        is >> bndry;
+        os << bndry << '\n'; // The bndry data width.
+    }
+    //
+    // Write out level by level.
+    //
+    for (int iLevel = 0; iLevel <= finestLevel; ++iLevel)
+    {
+        //
+        // Write state data.
+        //
+        int nGrids = amrData.boxArray(iLevel).size();
+        char buf[64];
+        sprintf(buf, "Level_%d", iLevel);
+        
+        if (ParallelDescriptor::IOProcessor())
+        {
+            int ilev,ngrd;
+            Real time;
+            is >> ilev >> ngrd >> time;
+            os << ilev << ' ' << ngrd << ' ' << time << '\n';
+
+            int tmpI;
+            is >> tmpI;
+            os << tmpI << '\n';
+            
+            Real glocl,gloch;
+            for (int i = 0; i < nGrids; ++i)
+            {
+                for (int n = 0; n < BL_SPACEDIM; n++)
+                {
+                    is >> glocl >> gloch;
+                    os << glocl
+                       << ' '
+                       << gloch
+                       << '\n';
+                }
+            }
+            //
+            // Build the directory to hold the MultiFabs at this level.
+            // NOTE: should already exist!
+            //
+            std::string Level(oFile);
+            Level += '/';
+            Level += buf;
+            
+//            if (!BoxLib::UtilCreateDirectory(Level, 0755))
+//                BoxLib::CreateDirectoryFailed(Level);
+        }
+        //
+        // Force other processors to wait till directory is built.
+        //
+        ParallelDescriptor::Barrier();
+        //
+        // Now build the full relative pathname of the MultiFab.
+        //
+        std::string PathName(oFile);
+        PathName += '/';
+        PathName += buf;
+        PathName += '/';
+        PathName += mfBaseName;
+        
+        if (ParallelDescriptor::IOProcessor())
+        {
+            //
+            // The full name relative to the Header file.
+            //
+            std::string RelativePathName(buf);
+            RelativePathName += '/';
+            RelativePathName += mfBaseName;
+           int idx = 0;
+            std::string oldMFname;
+           is >> oldMFname;
+          std::string c = "L" ;
+          std::string test;
+          test=oldMFname;
+          while (oldMFname[0]==c[0]) {
+//            is >> oldMFname;
+            os << oldMFname << '\n';
+            is >> oldMFname;
+//            std::cout << oldMFname << std::endl;         
+         
+            if(test==oldMFname){
+              
+//              std::cout << "putback" << oldMFname[0] << std::endl;
+             break;    }  
+             test = oldMFname;
+//            std::cout << test << std::endl;     
+            
+           }
+            is.putback(oldMFname[0]);
+            os << RelativePathName << '\n';
+        }
+        VisMF::Write(mfout[iLevel], PathName, VisMF::OneFilePerCPU);
+    }
+    
+    os.close();
+    is.close();
+}
+
+
+
 int
 main (int   argc,
       char* argv[])
@@ -34,7 +247,6 @@ main (int   argc,
 
   std::string infile; pp.get("infile",infile);
   std::string outfile = infile + std::string("_xi"); pp.query("outfile",outfile);
- // std::cout << "checkpoint1" << std::endl;
   DataServices::SetBatchMode();
   Amrvis::FileType fileType(Amrvis::NEWPLT);
   DataServices dataServices(infile, fileType);
@@ -43,44 +255,27 @@ main (int   argc,
   AmrData& amrData = dataServices.AmrDataRef();
   int finestLevel = amrData.FinestLevel(); pp.query("finestLevel",finestLevel);
   int Nlev = finestLevel + 1;
-// std::cout <<"Checkpoint2" << std::endl;
-//  std::cout << "above Chemdriver" << std::endl;
   ChemDriver cd;
-//  std::cout << "below chemdriver" << std::endl;
   int nElts = cd.numElements();
-//  std::cout << "below reference first to " << std::endl;
   int nSpec = cd.numSpecies();
   const Array<std::string>& elementNames = cd.elementNames();
   const Array<std::string>& speciesNames = cd.speciesNames();
-//  std::cout << "above Molecwt"<< std::endl;
- // Array<Real> wt =cd.elementAtomicWt();
   Array<Real> speciesMolecWt = cd.speciesMolecWt();
   Array<Real> elementWt = cd.elementAtomicWt();
-//  std::cout << "Deepak " << std::endl;
-//  for(int i=0; i <nElts ; ++i) {
-//     elementWt[i] = i*2+1;
-//}
-//  std::cout << "hehe" << cd.elementAtomicWt(0) <<std::endl;
   int nCompIn = nSpec + 1;
-//  std::cout << "above string " << nCompIn<<std::endl;
   
  Array<std::string> varNames(nCompIn);
-// std::cout << "just above llop" << std::endl; 
   for (int i=0; i<nSpec; ++i) {
 #ifdef MASS_FRAC_IN_PLOTFILE
     varNames[i] = "Y(" + cd.speciesNames()[i] + ")";
-//    std::cout << varNames[i] << std::endl;
 #else
     varNames[i] = "X(" + cd.speciesNames()[i] + ")";
 #endif
   }
 
-  //    elementWt = cd.elementAtomicWt();
        
 
-//  std::cout << "above temp" << std::endl; 
   varNames[nSpec] = "temp";
-//  std::cout << "below varNames " << std::endl;
   int iXi = nCompIn;
   int iZ = iXi + 1;
   int iZstar = iZ + nElts;
@@ -102,13 +297,8 @@ main (int   argc,
   int nC = cd.indexElt("C"); BL_ASSERT(nC >= 0  && nC < nElts);
   int nH = cd.indexElt("H"); BL_ASSERT(nH >= 0  && nH < nElts);
   int nO = cd.indexElt("O"); BL_ASSERT(nO >= 0  && nO < nElts);
-//  std::cout << nC << nH << nO <<std::endl;
-  //Real Carbon = cd.elementAtomicWt(0);
   Array<Real> beta(nElts, 0);
   beta[nC] = 2/elementWt[nC];
-//  std::cout << "atomic wt C " << elementWt[nC] << std::endl;
-//  std::cout << "atomic wt H " << elementWt[nH];
-//  std::cout << "atomic wt O " << elementWt[nO];
   beta[nH] = 1/(2*elementWt[nH]);
   beta[nO] = -1/elementWt[nO];
 
@@ -125,9 +315,8 @@ main (int   argc,
   Real Xfu = 0.2; pp.query("Xfu",Xfu);
   BL_ASSERT(Xfu<=1 && Xfu>=0);
     X_fu[cd.index(fuelName)] = Xfu;
-  X_fu[cd.index("N2")] = 1 - Xfu;
+  X_fu[cd.index("N2")] = 1 - Xfu;    // currently assumed only fuel and N2 in fuel stream
   Array<Real> Y_fu = cd.moleFracToMassFrac(X_fu);
-//  std::cout << "Mass frac of fuel: " << Y_fu[cd.index(fuelName)] << std::endl;
   Array<Real> Z_fu(nElts,0);
 
   for (int elt=0; elt<nElts; ++elt) {
@@ -148,10 +337,9 @@ main (int   argc,
   if (ParallelDescriptor::IOProcessor()) {
     std::cout << "Zstar_fu = " << Zstar_fu << std::endl;
   }
- //  std::cout << "checkpoint 3 " << std::endl;
   Array<Real> X_ox(nSpec,0);
-  X_ox[cd.index("O2")] = 0.15;
-  X_ox[cd.index("N2")] = 0.85;
+  X_ox[cd.index("O2")] = 0.15;  // change as per ambient conditions
+  X_ox[cd.index("N2")] = 0.85;  
   Array<Real> Y_ox = cd.moleFracToMassFrac(X_ox);
   if(ParallelDescriptor::IOProcessor()) {
   std::cout << "Mass frac of O2 in ox: " << Y_ox[cd.index("O2")] << std::endl;}
@@ -293,13 +481,9 @@ main (int   argc,
   }
   for (MFIter mfi(mf[0]); mfi.isValid(); ++mfi) {
     if (mfi.validbox().contains(IntVect(D_DECL(0,0,0)))) {
-  //    std::cout << "Stuff at ll corner: " << std::endl;
       IntVect iv(D_DECL(0,0,0));
-  //    std::cout << "MF: " << mf[0][mfi](iv,iXi) << std::endl;
- //     std::cout << "Y: " << std::endl;
       Array<Real> Y_test(nSpec);
       for (int n=0; n<nSpec; ++n) {
-//        std::cout << "  " << speciesNames[n] << " " << mf[0][mfi](iv,n) << " " << Y_ox[n] << std::endl;
         Y_test[n] = mf[0][mfi](iv,n);
       }
       Array<Real> Z_test(nElts,0);
@@ -307,19 +491,15 @@ main (int   argc,
         for (int spec=0; spec<nSpec; ++spec) {
           Z_test[elt] += Y_test[spec] * mu[spec][elt];
         }
-//        std::cout << "Z_test[" << elementNames[elt] << "] = " << Z_test[elt] << std::endl;
       }
       Real Zstar_test 
           = beta[nC]*Z_test[cd.indexElt("C")]
           + beta[nH]*Z_test[cd.indexElt("H")]
           + beta[nO]*Z_test[cd.indexElt("O")];
-//      std::cout << "Zstar_test = " << Zstar_test << std::endl;
 
       Real xi_test = (Zstar_test - Zstar_ox)/(Zstar_fu - Zstar_ox);
-//      std::cout << "xi_test = " << xi_test << std::endl;
     }
   }
-// if(ParallelDescriptor::IOProcessor()) std::cout << "Above outNames" <<std::endl;
   Array<string> outNames(nCompOut);
   for (int i=0; i<varNames.size(); ++i) {
     outNames[i] = varNames[i];
@@ -328,7 +508,6 @@ main (int   argc,
   outNames[iXi] = "Z";
   for (int i=0; i<nElts; ++i) {
     outNames[iZ+i] = "Z("+elementNames[i]+")";
- //   std::cout << elementWt[i] <<std::endl;
   }
   outNames[iZstar] = "Zstar";
   for (int iLevel=0; iLevel<=finestLevel; ++iLevel)
@@ -337,10 +516,12 @@ main (int   argc,
   }
   Array<std::string>  newname(1);
   newname[0] = outNames[nCompOut-6];
-//  WritePlotFile(Mixfrac,outfile,newname,amrData); 
-//  std::string newout = "./";
- 
-  AppendToPlotFile(amrData,Mixfrac,infile,newname,"Z", "NewHeader",0);
+  bool append = true ;
+  pp.query("append",append);
+  if (append) 
+  appendToPlotFile(amrData,Mixfrac,infile,newname, "Z",0);
+  else 
+  WritePlotFile(Mixfrac,outfile,newname,amrData);
 
   BoxLib::Finalize();
   return 0;

@@ -15,10 +15,124 @@
 #include "getReactionRates_F.H"
 #include "getJPDF_F.H"
 #include "preProcessing.H"
-#include "WritePlotFile.H"
 
 typedef ChemDriver::Edge Edge;
 typedef std::list<Edge> EdgeList;
+static
+void
+WritePlotFile (const PArray<MultiFab>&   mfout,
+               const std::string&        ofile,
+               const Array<std::string>& names,
+               AmrData&                  amrData)
+{
+    if (ParallelDescriptor::IOProcessor())
+        std::cout << "Writing plotfile " << ofile << " ...\n";
+
+    if (ParallelDescriptor::IOProcessor())
+        if (!BoxLib::UtilCreateDirectory(ofile,0755))
+            BoxLib::CreateDirectoryFailed(ofile);
+
+    ParallelDescriptor::Barrier();
+
+    std::string ofileHeader(ofile); ofileHeader += "/Header";
+  
+    VisMF::IO_Buffer io_buffer(VisMF::IO_Buffer_Size);
+
+    std::ofstream os;
+  
+    os.rdbuf()->pubsetbuf(io_buffer.dataPtr(), io_buffer.size());
+
+    os.open(ofileHeader.c_str(), std::ios::out | std::ios::binary);
+
+    if (os.fail()) BoxLib::FileOpenFailed(ofileHeader);
+
+    //const int finestLevel = amrData.FinestLevel();
+    const int finestLevel = mfout.size() - 1;
+
+    os << amrData.PlotFileVersion() << '\n';
+    os << names.size()              << '\n';
+
+    for (int i = 0; i < names.size(); i++)
+        os << names[i] << '\n';
+
+    os << BL_SPACEDIM               << '\n';
+    os << amrData.Time()            << '\n';
+    os << finestLevel << '\n';
+    for(int i = 0; i < BL_SPACEDIM; i++) os << amrData.ProbLo()[i] << ' ';
+    os << '\n';
+    for(int i = 0; i < BL_SPACEDIM; i++) os << amrData.ProbHi()[i] << ' ';
+    os << '\n';
+    for(int i = 0; i < finestLevel; i++) os << amrData.RefRatio()[i] << ' ';
+    os << '\n';
+    for(int i = 0; i <= finestLevel; i++) os << amrData.ProbDomain()[i] << ' ';
+    os << '\n';
+    for(int i = 0; i <= finestLevel; i++) os << 0 << ' ';
+    os << '\n';
+    for (int i = 0; i <= finestLevel; i++)
+    {
+        for(int k = 0; k < BL_SPACEDIM; k++)
+            os << amrData.DxLevel()[i][k] << ' ';
+        os << '\n';
+    }
+
+    os << amrData.CoordSys() << '\n';
+    os << "0\n";
+
+    for (int lev = 0; lev <= finestLevel; ++lev)
+    {
+        const int nGrids = amrData.boxArray(lev).size();
+        char buf[64];
+        sprintf(buf, "Level_%d", lev);
+    
+        if (ParallelDescriptor::IOProcessor())
+        {
+            os << lev << ' ' << nGrids << ' ' << amrData.Time() << '\n';
+            os << 0 << '\n';
+    
+            for (int i = 0; i < nGrids; ++i)
+            {
+                for(int n = 0; n < BL_SPACEDIM; n++)
+                {
+                    os << amrData.GridLocLo()[lev][i][n]
+                       << ' '
+                       << amrData.GridLocHi()[lev][i][n]
+                       << '\n';
+                }
+            }
+
+            std::string Level(ofile);
+            Level += '/';
+            Level += buf;
+    
+            if (!BoxLib::UtilCreateDirectory(Level, 0755))
+                BoxLib::CreateDirectoryFailed(Level);
+        }
+
+        ParallelDescriptor::Barrier();
+
+        static const std::string MultiFabBaseName("/MultiFab");
+    
+        std::string PathName(ofile);
+        PathName += '/';
+        PathName += buf;
+        PathName += MultiFabBaseName;
+    
+        if (ParallelDescriptor::IOProcessor())
+        {
+            std::string RelativePathName(buf);
+            RelativePathName += '/';
+            RelativePathName += MultiFabBaseName;
+            os << RelativePathName << '\n';
+        }
+
+        BL_ASSERT(mfout[lev].nComp() == names.size());
+
+        VisMF::Write(mfout[lev], PathName, VisMF::OneFilePerCPU);
+    }
+
+    os.close();
+
+}
 
 int
 main (int   argc,
@@ -36,7 +150,7 @@ main (int   argc,
 
     ChemDriver cd;
     
-    Real Patm=1; pp.query("Patm",Patm);
+    Real Patm=60; pp.query("Patm",Patm);
     std::string infile; pp.get("infile",infile);
     
     
@@ -94,6 +208,7 @@ main (int   argc,
        }
 
     PArray<MultiFab> outState(Nlev,PArrayManage);
+    PArray<MultiFab> outRed(Nlev,PArrayManage);
     int nComp = 1;
     int nSpec = cd.numSpecies();
     int sCompX = 0;
@@ -102,7 +217,7 @@ main (int   argc,
     Array<string> varNames(nSpec+1+1); // species, temperature, heatrelease
     for (int i=0; i<nSpec; ++i)
        {
-          varNames[sCompX + i] = "X(" + cd.speciesNames()[i] + ")";
+          varNames[sCompX + i] = "Y(" + cd.speciesNames()[i] + ")";
           if (amrData.StateNumber(varNames[sCompX + i]) < 0)
              BoxLib::Abort(std::string("Cannot find " + varNames[sCompX + i]).c_str());
        }
@@ -129,6 +244,7 @@ main (int   argc,
        amrData.FillVar(mf,iLevel,varNames,destFillComps);
        
        outState.set(iLevel,new MultiFab(bas[iLevel],nSpec+4*Nreacs+1+1+1,0)); // also store "heat of reaction" in outState. 
+      outRed.set(iLevel,new MultiFab(bas[iLevel],Nreacs+1,0));
        
        // Build volume at this level, use our own dx
        Real vol = 1;
@@ -144,7 +260,8 @@ main (int   argc,
              
              FArrayBox Hof(box,nSpec);
              FArrayBox T(box,1);
-             T.setVal(298.15);
+             T.copy(outState[iLevel][mfi],sCompT,0,1);
+ 
              FArrayBox totHofProd(box, 1);
              FArrayBox totHofReact(box, 1);
              FArrayBox HoReact(box, 1);
@@ -165,7 +282,7 @@ main (int   argc,
                 Hof.mult(cd.speciesMolecWt()[is]/1000, is, 1);
              }
              
-             cd.moleFracToMassFrac(outState[iLevel][mfi],fab,box,sCompX,sCompX);
+//             cd.moleFracToMassFrac(outState[iLevel][mfi],fab,box,sCompX,sCompX);
            
              
              if (iLevel < bas.size()-1)
@@ -240,7 +357,7 @@ main (int   argc,
              
              /*end. outState: Y_i (mass fraction of species), T, HeatRelease, Fwd_rr (nSpec), Bkw_rr(nSpec), rr(nSpec)*/
              /* calculate the heat of reaction for each reaction. */
-             
+            outRed[iLevel][mfi].copy(outState[iLevel][mfi],sCompT+1+1+3*Nreacs,0,Nreacs+1); 
           }
 
        if (ParallelDescriptor::IOProcessor())
@@ -248,7 +365,7 @@ main (int   argc,
      
     }
    
-    std::string nameFile ="chem-H-84-reactions-names"; pp.query("nameFile",nameFile);
+   /* std::string nameFile ="chem-H-84-reactions-names"; pp.query("nameFile",nameFile);
     std::ifstream istr(nameFile.c_str(),std::ios::in);
     std::list<std::string> rrnames;
     while (istr){
@@ -258,7 +375,6 @@ main (int   argc,
           rrnames.push_back(name);
     }
     
-    std::string outfile(getFileRoot(infile) + "_reactionRates"); pp.query("outfile",outfile);
     Array<std::string> names(nSpec+3+4*Nreacs);
     for (int i=0; i<nSpec; ++i) {
        names[i] = "Y(" + cd.speciesNames()[i] + ")";
@@ -291,11 +407,16 @@ main (int   argc,
     }
 
     names[nSpec+2+4*Nreacs] = "TotHofR";
-    
+    */
+
+    std::string outfile(getFileRoot(infile) + "_reactionRates"); pp.query("outfile",outfile);
     bool verb=true;
     AmrData& a = amrData;
-    WritePlotfile("NavierStokes-V1.1",outState, a.Time(),a.ProbLo(),a.ProbHi(),a.RefRatio(),a.ProbDomain(),
-                  a.DxLevel(),a.CoordSys(),outfile,names,verb);
+    Array<std::string> names(Nreacs+1);
+    for(int i=0 ; i< Nreacs; i++) names[i] = "Reacs_";
+
+    names[Nreacs] = "HeatRelease";
+    WritePlotFile(outRed,outfile,names,a);
     
     if (ParallelDescriptor::IOProcessor())
        std::cerr << "Data has been written to a plot file: "<<outfile.c_str()<< std::endl;

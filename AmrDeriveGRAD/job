@@ -1,0 +1,11 @@
+#!/bin/bash -l
+#SBATCH -p debug
+#SBATCH -N 10
+#SBATCH -t 00:10:00
+#SBATCH -J my_job
+#SBATCH -o slurm.o%j
+#SBATCH -L SCRATCH,project
+
+#Edison has 24 cores per compute node
+
+srun -n 240 ./AmrDeriveGRAD3d.Linux.Intel.Intel.MPI.DODECANE_LU.ex inputs2d

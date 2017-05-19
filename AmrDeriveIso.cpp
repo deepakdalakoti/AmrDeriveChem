@@ -1,4 +1,3 @@
-//BL_COPYRIGHT_NOTICE
 
 #include <winstd.H>
 #ifdef WIN32
@@ -31,7 +30,6 @@ using std::set;
 #include "ParallelDescriptor.H"
 #include "DataServices.H"
 #include "Utility.H"
-#include "PArray.H"
 #include "FArrayBox.H"
 #include "Geometry.H"
 #include "AmrDeriveIso_F.H"
@@ -923,9 +921,7 @@ Collate(Array<Real>& NodeRaw,
         Array<int>&  EltRaw,
         int          nCompPerNode)
 {
-
 #if BL_USE_MPI
-
     const int nProcs = ParallelDescriptor::NProcs(); 
 
     if (nProcs < 2) return;
@@ -949,12 +945,13 @@ Collate(Array<Real>& NodeRaw,
                IOProc,
                ParallelDescriptor::Communicator());
 
+    Array<Real> NodeRawT;
     if (ParallelDescriptor::IOProcessor())
     {
         for (int i = 1; i < nProcs; i++)
             offsetR[i] = offsetR[i-1] + nmdataR[i-1];
 
-        NodeRaw.resize(offsetR[nProcs-1] + nmdataR[nProcs-1]);
+        NodeRawT.resize(offsetR[nProcs-1] + nmdataR[nProcs-1]);
     }
     //
     // Gather all the Real data to IOProc into NodeRaw.
@@ -962,7 +959,7 @@ Collate(Array<Real>& NodeRaw,
     MPI_Gatherv(NodeRaw.dataPtr(),
                 countR,
                 ParallelDescriptor::Mpi_typemap<Real>::type(),
-                NodeRaw.dataPtr(),
+                NodeRawT.dataPtr(),
                 nmdataR.dataPtr(),
                 offsetR.dataPtr(),
                 ParallelDescriptor::Mpi_typemap<Real>::type(),
@@ -982,12 +979,13 @@ Collate(Array<Real>& NodeRaw,
                IOProc,
                ParallelDescriptor::Communicator());
 
+    Array<int> EltRawT;
     if (ParallelDescriptor::IOProcessor())
     {
         for (int i = 1; i < nProcs; i++)
             offsetI[i] = offsetI[i-1] + nmdataI[i-1];
 
-        EltRaw.resize(offsetI[nProcs-1] + nmdataI[nProcs-1]);
+        EltRawT.resize(offsetI[nProcs-1] + nmdataI[nProcs-1]);
     }
     //
     // Gather all the data to IOProc into EltRaw
@@ -995,7 +993,7 @@ Collate(Array<Real>& NodeRaw,
     MPI_Gatherv(EltRaw.dataPtr(),
                 countI,
                 ParallelDescriptor::Mpi_typemap<int>::type(),
-                EltRaw.dataPtr(),
+                EltRawT.dataPtr(),
                 nmdataI.dataPtr(),
                 offsetI.dataPtr(),
                 ParallelDescriptor::Mpi_typemap<int>::type(),
@@ -1010,9 +1008,12 @@ Collate(Array<Real>& NodeRaw,
         {
             const int nodeOffset = offsetR[i]/nCompPerNode;
             for (int j = 0; j < nmdataI[i]; j++)                
-                EltRaw[offsetI[i]+j] += nodeOffset;
+                EltRawT[offsetI[i]+j] += nodeOffset;
         }
     }
+
+    std::swap(EltRawT,EltRaw);
+    std::swap(NodeRawT,NodeRaw);
 #endif
 }
 
@@ -1176,9 +1177,6 @@ main (int   argc,
         }
     }
 
-    const Real strt_time_surf = ParallelDescriptor::second();
-    Real io_time = 0;
-
     set<Node> nodeSet;
     set<Element> eltSet;
     int nodeCtr = 0;
@@ -1231,20 +1229,17 @@ main (int   argc,
         if (verbose && ParallelDescriptor::IOProcessor())
             cerr << "Filling interp data at level " << lev << ": ";
 
-        const Real strt_time_io = ParallelDescriptor::second();
         MultiFab tmp(gGridArray,1,0);
         for (int i=0; i<varnames.size(); ++i)
         {
             amrData.FillVar(tmp,lev,varnames[i],0);
             for (MFIter mfi(state); mfi.isValid(); ++mfi)
                 state[mfi].copy(tmp[mfi],0,BL_SPACEDIM+i,1);
-            //amrData.FlushGrids(amrData.StateNumber(varnames[i]));
+            amrData.FlushGrids(amrData.StateNumber(varnames[i]));
             if (verbose && ParallelDescriptor::IOProcessor())
                 cerr << varnames[i] << " ";
         }
         if (verbose && ParallelDescriptor::IOProcessor()) cerr << '\n';
-        const Real end_time_io = ParallelDescriptor::second();
-        io_time += end_time_io - strt_time_io;
 
         for (MFIter mfi(state); mfi.isValid(); ++mfi)
         {
@@ -1355,30 +1350,6 @@ main (int   argc,
     for (std::set<Node>::iterator it=nodeSet.begin(); it!=nodeSet.end(); ++it)
         sortedNodes[it->m_idx] = it;
 
-    const Real end_time_surf = ParallelDescriptor::second();
-    const Real surf_time = end_time_surf - strt_time_surf - io_time;
-
-    Real surf_time_max, surf_time_min; surf_time_max = surf_time_min = surf_time;
-    Real io_time_max, io_time_min; io_time_max = io_time_min = io_time;
-
-    const int IOProc   = ParallelDescriptor::IOProcessorNumber();
-    ParallelDescriptor::ReduceRealMax(surf_time_max,IOProc);
-    ParallelDescriptor::ReduceRealMax(io_time_max,IOProc);
-    ParallelDescriptor::ReduceRealMin(surf_time_min,IOProc);
-    ParallelDescriptor::ReduceRealMin(io_time_min,IOProc);
-    if (ParallelDescriptor::IOProcessor()) {
-        std::cout << "Max Compute Surface time: " << surf_time_max << '\n';
-        std::cout << "Min Compute Surface time: " << surf_time_min << '\n';
-        std::cout << "Max I/O time: " << io_time_max << '\n';
-        std::cout << "Min I/O time: " << io_time_min << '\n';
-    }
-
-    // Prepare floating point and integer data for MPI communication (make two arrays to pass around)
-    if (ParallelDescriptor::IOProcessor() && nodeSet.size()==0)
-        BoxLib::Abort("nodeSet size = 0 for some reason");
-
-    const Real strt_time_comm = ParallelDescriptor::second();
-
     const int nReal = comps.size()*nodeSet.size();
     Array<Real> nodeRaw(nReal);
     for (long i=0; i<sortedNodes.size(); ++i)
@@ -1392,8 +1363,6 @@ main (int   argc,
 
     int cnt = 0;
     Array<int> eltRaw(BL_SPACEDIM*eltSet.size());
-
-
     for (std::set<Element>::const_iterator it = eltSet.begin(); it != eltSet.end(); ++it)
     {
         const Element& e = *it;
@@ -1418,38 +1387,6 @@ main (int   argc,
         ++cnt;
     }
 
-#if 0
-    long min_nonfab_bytes = 
-        nodeSet.size() * sizeof(Node) 
-        + eltSet.size() * sizeof(Element)
-        + sortedNodes.size() * sizeof(std::set<Node>::iterator)
-        + nodeRaw.size() * sizeof(Real)
-        + eltRaw.size() * sizeof(int);
-    long max_nonfab_bytes = min_nonfab_bytes;
-    ParallelDescriptor::ReduceLongMin(min_nonfab_bytes,IOProc);
-    ParallelDescriptor::ReduceLongMax(max_nonfab_bytes,IOProc);
-    if (ParallelDescriptor::IOProcessor()) {
-        std::cout << "\nNon-FAB byte spread across MPI nodes: ["
-                  << min_nonfab_bytes
-                  << " ... "
-                  << max_nonfab_bytes
-                  << "]\n";
-    }
-
-    long min_fab_bytes = BoxLib::total_bytes_allocated_in_fabs_hwm;
-    long max_fab_bytes = BoxLib::total_bytes_allocated_in_fabs_hwm;
-    
-    ParallelDescriptor::ReduceLongMin(min_fab_bytes,IOProc);
-    ParallelDescriptor::ReduceLongMax(max_fab_bytes,IOProc);
-    if (ParallelDescriptor::IOProcessor()) {
-        std::cout << "\nFAB byte spread across MPI nodes: ["
-                  << min_fab_bytes
-                  << " ... "
-                  << max_fab_bytes
-                  << "]\n";
-    }
-#endif
-
     // All relevant data now in "raw" arrays
     nodeSet.clear();
     eltSet.clear();
@@ -1457,23 +1394,10 @@ main (int   argc,
 
     // Communicate node and element info from all procs to IOProc
     Collate(nodeRaw,eltRaw,nComp);
-
-#if 0
-    const Real end_time_comm = ParallelDescriptor::second();
-    const Real comm_time = end_time_comm - strt_time_comm;
-    Real comm_time_max, comm_time_min; comm_time_max = comm_time_min = comm_time;
-    ParallelDescriptor::ReduceRealMin(comm_time_min,IOProc);
-    ParallelDescriptor::ReduceRealMax(comm_time_max,IOProc);
-    if (ParallelDescriptor::IOProcessor()) {
-        std::cout << "Max Comm time: " << comm_time_max << '\n';
-        std::cout << "Min Comm time: " << comm_time_min << '\n';
-    }
-#endif
  
     if (ParallelDescriptor::IOProcessor())
     {
         // Uniquify nodes, and make elements consistent
-        const Real strt_time_uniq = ParallelDescriptor::second();
 
         std::vector<Real> newData(nComp);
         int nNodes = nodeRaw.size()/nComp;
@@ -1569,11 +1493,7 @@ main (int   argc,
 	      }
 	  }
 #endif
-        const Real end_time_uniq = ParallelDescriptor::second();
-        const Real uniq_time = end_time_uniq - strt_time_uniq;
-        std::cout << "Uniquify time: " << uniq_time << '\n';
 
-        const Real strt_time_sout = ParallelDescriptor::second();
         bool writeSurf = true; pp.query("writeSurf",writeSurf);
         if (writeSurf)
         {
@@ -1639,10 +1559,9 @@ main (int   argc,
                 // Clear out some memory now
                 sortedNodes.clear(); 
                 nodeSet.clear();
-#if 0
-                if (verbose)
-                    cout << "Total memory presently allocated on I/O proc in fab data: " << BoxLib::total_bytes_allocated_in_fabs << " bytes" << endl;
-#endif
+
+                //if (verbose)
+                 //   cout << "Total memory presently allocated on I/O proc in fab data: " << BoxLib::total_bytes_allocated_in_fabs << " bytes" << endl;
 
                 // Now allocate final fabdata, and populate with file data
                 if (verbose)
@@ -1739,9 +1658,6 @@ main (int   argc,
                 ofs.close();
             cout << "            ...done" << endl;
         }
-        const Real end_time_sout = ParallelDescriptor::second();
-        const Real sout_time = end_time_sout - strt_time_sout;
-        std::cout << "Surface output time: " << sout_time << '\n';
 
 #if 0
         // Compute area of isosurface

@@ -2,7 +2,7 @@
 #include "ArrayLim.H"
 #include "getReactionRates_F.H"
 
-#define SDIM 2
+#define SDIM 3
  
       
       subroutine FORT_GETSUMRR(lo,hi, FWD,DIMS(FWD), 
@@ -16,12 +16,14 @@
       REAL_T   REV(DIMV(REV),Nreacs)
       REAL_T   SUM(DIMV(SUM),Nreacs)
       integer Nreacs
-      integer i, j, n
+      integer i, j,k, n
       
       do i=lo(1),hi(1)
          do j=lo(2),hi(2)
+         do k=lo(3), hi(3)
             do n=1, Nreacs
-               SUM(i,j, n) = FWD(i,j,n) - REV(i,j,n)
+               SUM(i,j,k, n) = FWD(i,j,k,n) - REV(i,j,k,n)
+            enddo
             enddo
          enddo
       enddo
@@ -53,11 +55,11 @@
       do i=lo(1),hi(1)
          do j=lo(2),hi(2)
             do n=1, Ns-1
-               if ((T(i,j) .GE. (minT+(n-1)*deltaT)) .AND. (T(i,j)
-     &          .LT. (minT+n*deltaT))) then
-                  integr(n) = integr(n) + HR(i,j)
-                  icount(n) = icount(n) +1
-               endif
+!               if ((T(i,j) .GE. (minT+(n-1)*deltaT)) .AND. (T(i,j)
+!     &          .LT. (minT+n*deltaT))) then
+!                  integr(n) = integr(n) + HR(i,j)
+!                  icount(n) = icount(n) +1
+!               endif
             enddo
          enddo
       enddo
@@ -91,10 +93,10 @@ c      print *, 'integral heat release in temperature space ', Sum
       do i=lo(1),hi(1)
          do j=lo(2),hi(2)
             do n=1, Nt-1
-               if ((X(i,j) .GE. (min+(n-1)*delta)) .AND. (X(i,j)
-     &          .LT. (min+n*delta))) then
-                  icount(n) = icount(n) +1
-               endif
+!               if ((X(i,j) .GE. (min+(n-1)*delta)) .AND. (X(i,j)
+!     &          .LT. (min+n*delta))) then
+!                  icount(n) = icount(n) +1
+!               endif
             enddo
          enddo
       enddo
